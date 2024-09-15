@@ -1,6 +1,5 @@
 use std::env;
 use std::fs;
-use std::io::SeekFrom;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -99,10 +98,12 @@ fn tokenize(file_content: &str) {
                             acc.push(c);
                             acc
                         });
-                if chars.peek().is_none() {
-                    eprintln!("[line {line_count}] Error: Unterminated string.");
-                    lexical_error = true;
-                }
+                // if chars.peek().is_none() {
+                //     eprintln!("[line {line_count}] Error: Unterminated string.");
+                //     lexical_error = true;
+                // }else {
+
+                // }
                 println!("STRING \"{literal}\" {literal}");
             }
             c => {
