@@ -138,7 +138,11 @@ fn tokenize(file_content: &str) {
 
                 let number: f64 = number_str.parse().unwrap();
 
-                println!("NUMBER {number_str} {number}");
+                if floating {
+                    println!("NUMBER {number_str} {number}");
+                } else {
+                    println!("NUMBER {number_str} {number}.0");
+                }
             }
             c => {
                 eprintln!("[line {line_count}] Error: Unexpected character: {c}");
