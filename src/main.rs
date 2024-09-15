@@ -122,16 +122,27 @@ fn tokenize(file_content: &str) {
                 }
             }
             c if c.is_ascii_digit() => {
+                let mut floating = false;
                 let number = chars
                     .by_ref()
                     .take_while(|c| c.is_ascii_digit() || c == &'.')
+                    .inspect(|c| {
+                        if c == &'.' {
+                            floating = true
+                        }
+                    })
                     .fold(String::from(c), |mut acc, c| {
                         acc.push(c);
                         acc
                     });
 
                 let number: f64 = number.parse().unwrap();
-                println!("NUMBER {number} {number}");
+
+                if floating {
+                    println!("NUMBER {number} {number}");
+                } else {
+                    println!("NUMBER {number} {number}.0");
+                }
             }
             c => {
                 eprintln!("[line {line_count}] Error: Unexpected character: {c}");
