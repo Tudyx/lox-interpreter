@@ -44,7 +44,8 @@ fn tokenize(file_content: &str) {
             '+' => println!("PLUS + null"),
             ';' => println!("SEMICOLON ; null"),
             '*' => println!("STAR * null"),
-            _ => panic!("Unhandled token"),
+            // '$' | '#' =>
+            c => eprintln!("[line 1] Error: Unexpected character: {c}"),
         }
     }
     println!("EOF  null");
