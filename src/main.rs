@@ -78,7 +78,18 @@ fn tokenize(file_content: &str) {
             '/' => {
                 // We ignore the rest of the line
                 if chars.next_if_eq(&'/').is_some() {
-                    while chars.by_ref().next_if_eq(&'\n').is_none() {}
+                    while let Some(_) = chars.by_ref().next() {
+                        if chars.peek().is_some_and(|c| c == &'\n') {
+                            break;
+                        }
+                    }
+                    // while chars.by_ref().next_if_eq(&'\n').is_some() && chars.filter_map() {}
+                    // for _ in chars.by_ref() {
+                    //     if chars.peek().is_some_and(|c| c == &'\n') {
+                    //         break;
+                    //     }
+                    // }
+                    // line_count += 1;
                 } else {
                     println!("SLASH / null")
                 }
