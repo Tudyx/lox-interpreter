@@ -91,10 +91,14 @@ fn tokenize(file_content: &str) {
             ' ' | '\t' => {}
             '\n' => line_count += 1,
             '"' => {
-                let literal = chars
-                    .by_ref()
-                    .take_while(|c| c != &'"')
-                    .fold(String::new(), |acc, c| format!("{acc}{c}"));
+                let literal =
+                    chars
+                        .by_ref()
+                        .take_while(|c| c != &'"')
+                        .fold(String::new(), |mut acc, c| {
+                            acc.push(c);
+                            acc
+                        });
                 if chars.peek().is_none() {
                     eprintln!("[line {line_count}] Error: Unterminated string.");
                     lexical_error = true;
