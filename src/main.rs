@@ -39,4 +39,5 @@ fn tokenize(file_content: &str) {
             _ => println!("EOF null"),
         }
     }
+    println!("EOF null");
 }
