@@ -59,6 +59,20 @@ fn tokenize(file_content: &str) {
                     println!("BANG ! null")
                 }
             }
+            '<' => {
+                if chars.next_if_eq(&'=').is_some() {
+                    println!("LESS_EQUAL <= null");
+                } else {
+                    println!("LESS < null")
+                }
+            }
+            '>' => {
+                if chars.next_if_eq(&'=').is_some() {
+                    println!("GREATER_EQUAL >= null");
+                } else {
+                    println!("GREATER < null")
+                }
+            }
             c => {
                 eprintln!("[line 1] Error: Unexpected character: {c}");
                 lexical_error = true;
