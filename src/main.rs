@@ -32,6 +32,7 @@ fn main() {
 
 fn tokenize(file_content: &str) {
     let mut lexical_error = false;
+
     let mut chars = file_content.chars().peekable();
     while let Some(c) = chars.next() {
         match c {
