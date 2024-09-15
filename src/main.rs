@@ -56,6 +56,11 @@ fn tokenize(file_content: &str) {
                         .is_some_and(|octet| *octet == b'=')
                 {
                     println!("EQUAL_EQUAL == null");
+                } else if file_content
+                    .as_bytes()
+                    .get(i - 1)
+                    .is_some_and(|octet| *octet == b'=')
+                {
                 } else {
                     println!("EQUAL = null")
                 }
