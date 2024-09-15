@@ -74,6 +74,7 @@ fn tokenize(file_content: &str) {
                 }
             }
             '/' => {
+                // We ignore the rest of the line
                 if chars.next_if_eq(&'/').is_some() {
                     for _ in chars.by_ref() {}
                 } else {
