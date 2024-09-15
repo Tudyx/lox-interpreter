@@ -103,16 +103,6 @@ fn tokenize(file_content: &str) {
                         acc.push(c);
                         acc
                     });
-
-                // let mut literal = String::new();
-                // let mut ended = false;
-                // for c in chars.by_ref() {
-                //     if c == '"' {
-                //         ended = true;
-                //         break;
-                //     }
-                //     literal.push(c);
-                // }
                 if ended {
                     println!("STRING \"{literal}\" {literal}");
                 } else {
@@ -121,13 +111,6 @@ fn tokenize(file_content: &str) {
                 }
             }
             c if c.is_ascii_digit() => {
-                // let number_str = chars
-                //     .by_ref()
-                //     .take_while(|c| c.is_ascii_digit() || c == &'.')
-                //     .fold(String::from(c), |mut acc, c| {
-                //         acc.push(c);
-                //         acc
-                //     });
                 let mut number_str = String::from(c);
 
                 let mut first_dot = false;
@@ -148,19 +131,6 @@ fn tokenize(file_content: &str) {
                     number_str.push(*c);
                     chars.next();
                 }
-
-                // while chars
-                //     .by_ref()
-                //     .next_if(|c| matches!(c, '.' | '1'..='9'))
-                //     .is_some()
-                // {}
-
-                // chars.next_if_eq('0')
-                // chars.by_ref().take_while(|c| chars.peek().is_some());
-                // if chars.peek().is_some_and(|c| )
-                // for c in chars.by_ref() {
-
-                // }
 
                 let number: f64 = number_str.parse().unwrap();
 
