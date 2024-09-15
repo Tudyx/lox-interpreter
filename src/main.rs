@@ -1,5 +1,6 @@
 use std::env;
 use std::fs;
+use std::io::SeekFrom;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -89,6 +90,17 @@ fn tokenize(file_content: &str) {
             }
             ' ' | '\t' => {}
             '\n' => line_count += 1,
+            '"' => {
+                let literal = chars
+                    .by_ref()
+                    .take_while(|c| c != &'"')
+                    .fold(String::new(), |acc, c| format!("{acc}{c}"));
+                if chars.peek().is_none() {
+                    eprintln!("[line {line_count}] Error: Unterminated string.");
+                    lexical_error = true;
+                }
+                println!("STRING \"{literal}\" {literal}");
+            }
             c => {
                 eprintln!("[line {line_count}] Error: Unexpected character: {c}");
                 lexical_error = true;
