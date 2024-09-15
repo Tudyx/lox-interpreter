@@ -139,6 +139,7 @@ fn tokenize(file_content: &str) {
                     if c == &'.' {
                         first_dot = true;
                         number_str.push(*c);
+                        chars.next();
                         continue;
                     }
 
@@ -146,6 +147,7 @@ fn tokenize(file_content: &str) {
                         break;
                     }
                     number_str.push(*c);
+                    chars.next();
                 }
 
                 // while chars
