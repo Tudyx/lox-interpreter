@@ -32,6 +32,7 @@ fn main() {
 }
 
 fn tokenize(file_content: &str) {
+    let mut lexical_error = false;
     for c in file_content.chars() {
         match c {
             '(' => println!("LEFT_PAREN ( null"),
@@ -47,9 +48,12 @@ fn tokenize(file_content: &str) {
             // '$' | '#' =>
             c => {
                 eprintln!("[line 1] Error: Unexpected character: {c}");
-                std::process::exit(65)
+                lexical_error = true;
             }
         }
     }
     println!("EOF  null");
+    if lexical_error {
+        std::process::exit(65);
+    }
 }
