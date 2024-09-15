@@ -36,8 +36,8 @@ fn tokenize(file_content: &str) {
         match c {
             '(' => println!("LEFT_PAREN ( null"),
             ')' => println!("RIGHT_PAREN ) null"),
-            _ => println!("EOF null"),
+            _ => panic!("Unhandled token"),
         }
     }
-    println!("EOF null");
+    println!("EOF  null");
 }
