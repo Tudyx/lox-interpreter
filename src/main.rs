@@ -93,12 +93,12 @@ fn tokenize(file_content: &str) {
                 let mut ended = false;
                 let literal = chars
                     .by_ref()
-                    .take_while(|c| c != &'"')
                     .inspect(|c| {
                         if c == &'"' {
                             ended = true;
                         }
                     })
+                    .take_while(|c| c != &'"')
                     .fold(String::new(), |mut acc, c| {
                         acc.push(c);
                         acc
