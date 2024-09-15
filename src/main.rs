@@ -45,11 +45,15 @@ fn tokenize(file_content: &str) {
             ';' => println!("SEMICOLON ; null"),
             '*' => println!("STAR * null"),
             '=' => {
-                // We assume that the text contains only ASCII charactere
+                // We assume that the text contains only ASCII characters
                 if file_content
                     .as_bytes()
                     .get(i + 1)
                     .is_some_and(|octet| *octet == b'=')
+                    && file_content
+                        .as_bytes()
+                        .get(i - 1)
+                        .is_some_and(|octet| *octet == b'=')
                 {
                     println!("EQUAL_EQUAL == null");
                 } else {
