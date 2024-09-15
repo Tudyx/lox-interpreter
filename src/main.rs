@@ -50,7 +50,7 @@ fn tokenize(file_content: &str) {
                     .as_bytes()
                     .get(i + 1)
                     .is_some_and(|octet| *octet == b'=')
-                    && file_content
+                    && !file_content
                         .as_bytes()
                         .get(i - 1)
                         .is_some_and(|octet| *octet == b'=')
