@@ -73,6 +73,11 @@ fn tokenize(file_content: &str) {
                     println!("GREATER > null")
                 }
             }
+            '/' => {
+                if chars.next_if_eq(&'/').is_none() {
+                    println!("SLASH / null")
+                }
+            }
             c => {
                 eprintln!("[line 1] Error: Unexpected character: {c}");
                 lexical_error = true;
