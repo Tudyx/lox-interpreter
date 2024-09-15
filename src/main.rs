@@ -1,6 +1,5 @@
 use std::env;
 use std::fs;
-use std::ops::Index;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -27,7 +26,6 @@ fn main() {
         }
         _ => {
             eprintln!("Unknown command: {}", command);
-            return;
         }
     }
 }
