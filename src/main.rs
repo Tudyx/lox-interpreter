@@ -98,6 +98,8 @@ fn tokenize(file_content: &str) {
                             acc.push(c);
                             acc
                         });
+                eprintln!("literal = {literal}");
+                eprintln!("chars= {chars:?}");
                 // if chars.peek().is_none() {
                 //     eprintln!("[line {line_count}] Error: Unterminated string.");
                 //     lexical_error = true;
