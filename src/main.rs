@@ -138,12 +138,13 @@ fn tokenize(file_content: &str) {
                     }
                     if c == &'.' {
                         first_dot = true;
+                        number_str.push(*c);
+                        continue;
                     }
 
                     if !c.is_ascii_digit() {
                         break;
                     }
-
                     number_str.push(*c);
                 }
 
