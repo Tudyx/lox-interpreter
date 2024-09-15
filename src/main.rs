@@ -45,7 +45,10 @@ fn tokenize(file_content: &str) {
             ';' => println!("SEMICOLON ; null"),
             '*' => println!("STAR * null"),
             // '$' | '#' =>
-            c => eprintln!("[line 1] Error: Unexpected character: {c}"),
+            c => {
+                eprintln!("[line 1] Error: Unexpected character: {c}");
+                std::process::exit(65)
+            }
         }
     }
     println!("EOF  null");
