@@ -122,15 +122,9 @@ fn tokenize(file_content: &str) {
                 }
             }
             c if c.is_ascii_digit() => {
-                let mut floating = false;
                 let number_str = chars
                     .by_ref()
                     .take_while(|c| c.is_ascii_digit() || c == &'.')
-                    .inspect(|c| {
-                        if c == &'.' {
-                            floating = true
-                        }
-                    })
                     .fold(String::from(c), |mut acc, c| {
                         acc.push(c);
                         acc
