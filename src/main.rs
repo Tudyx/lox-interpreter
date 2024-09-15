@@ -70,7 +70,7 @@ fn tokenize(file_content: &str) {
                 if chars.next_if_eq(&'=').is_some() {
                     println!("GREATER_EQUAL >= null");
                 } else {
-                    println!("GREATER < null")
+                    println!("GREATER > null")
                 }
             }
             c => {
