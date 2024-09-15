@@ -123,7 +123,7 @@ fn tokenize(file_content: &str) {
             }
             c if c.is_ascii_digit() => {
                 let mut floating = false;
-                let number = chars
+                let number_str = chars
                     .by_ref()
                     .take_while(|c| c.is_ascii_digit() || c == &'.')
                     .inspect(|c| {
@@ -136,13 +136,9 @@ fn tokenize(file_content: &str) {
                         acc
                     });
 
-                let number: f64 = number.parse().unwrap();
+                let number: f64 = number_str.parse().unwrap();
 
-                if floating {
-                    println!("NUMBER {number} {number}");
-                } else {
-                    println!("NUMBER {number} {number}.0");
-                }
+                println!("NUMBER {number_str} {number}");
             }
             c => {
                 eprintln!("[line {line_count}] Error: Unexpected character: {c}");
