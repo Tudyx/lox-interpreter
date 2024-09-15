@@ -32,7 +32,8 @@ fn main() {
 
 fn tokenize(file_content: &str) {
     let mut lexical_error = false;
-    for (i, c) in file_content.chars().enumerate() {
+    let mut chars = file_content.chars().peekable();
+    while let Some(c) = chars.next() {
         match c {
             '(' => println!("LEFT_PAREN ( null"),
             ')' => println!("RIGHT_PAREN ) null"),
@@ -45,22 +46,8 @@ fn tokenize(file_content: &str) {
             ';' => println!("SEMICOLON ; null"),
             '*' => println!("STAR * null"),
             '=' => {
-                // We assume that the text contains only ASCII characters
-                if file_content
-                    .as_bytes()
-                    .get(i + 1)
-                    .is_some_and(|octet| *octet == b'=')
-                    && !file_content
-                        .as_bytes()
-                        .get(i - 1)
-                        .is_some_and(|octet| *octet == b'=')
-                {
+                if chars.next_if_eq(&'=').is_some() {
                     println!("EQUAL_EQUAL == null");
-                } else if file_content
-                    .as_bytes()
-                    .get(i - 1)
-                    .is_some_and(|octet| *octet == b'=')
-                {
                 } else {
                     println!("EQUAL = null")
                 }
