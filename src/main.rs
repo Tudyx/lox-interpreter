@@ -52,6 +52,13 @@ fn tokenize(file_content: &str) {
                     println!("EQUAL = null")
                 }
             }
+            '!' => {
+                if chars.next_if_eq(&'=').is_some() {
+                    println!("BANG_EQUAL != null");
+                } else {
+                    println!("BANG ! null")
+                }
+            }
             c => {
                 eprintln!("[line 1] Error: Unexpected character: {c}");
                 lexical_error = true;
