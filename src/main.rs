@@ -31,4 +31,12 @@ fn main() {
     }
 }
 
-fn tokenize(file_content: &str) {}
+fn tokenize(file_content: &str) {
+    for c in file_content.chars() {
+        match c {
+            '(' => println!("LEFT_PAREN ( null"),
+            ')' => println!("RIGHT_PAREN ) null"),
+            _ => println!("EOF null"),
+        }
+    }
+}
