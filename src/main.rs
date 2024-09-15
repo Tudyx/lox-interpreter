@@ -90,35 +90,48 @@ fn tokenize(file_content: &str) {
             ' ' | '\t' => {}
             '\n' => line_count += 1,
             '"' => {
-                let mut ended = false;
-                let literal = chars
-                    .by_ref()
-                    .take_while(|c| {
-                        if c == &'"' {
-                            ended = true;
-                        }
-                        c != &'"'
-                    })
-                    .fold(String::new(), |mut acc, c| {
-                        acc.push(c);
-                        acc
-                    });
-
-                // let mut literal = String::new();
+                // TODO: test me
                 // let mut ended = false;
-                // for c in chars.by_ref() {
-                //     if c == '"' {
-                //         ended = true;
-                //         break;
-                //     }
-                //     literal.push(c);
-                // }
+                // let literal = chars
+                //     .by_ref()
+                //     .take_while(|c| {
+                //         if c == &'"' {
+                //             ended = true;
+                //         }
+                //         c != &'"'
+                //     })
+                //     .fold(String::new(), |mut acc, c| {
+                //         acc.push(c);
+                //         acc
+                //     });
+
+                let mut literal = String::new();
+                let mut ended = false;
+                for c in chars.by_ref() {
+                    if c == '"' {
+                        ended = true;
+                        break;
+                    }
+                    literal.push(c);
+                }
                 if ended {
                     println!("STRING \"{literal}\" {literal}");
                 } else {
                     eprintln!("[line {line_count}] Error: Unterminated string.");
                     lexical_error = true;
                 }
+            }
+            c if c.is_ascii_digit() => {
+                let number = chars
+                    .by_ref()
+                    .take_while(|c| c.is_ascii_digit() || c == &'.')
+                    .fold(String::from(c), |mut acc, c| {
+                        acc.push(c);
+                        acc
+                    });
+
+                let number: f64 = number.parse().unwrap();
+                println!("NUMBER {number} {number}");
             }
             c => {
                 eprintln!("[line {line_count}] Error: Unexpected character: {c}");
