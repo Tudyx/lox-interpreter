@@ -32,6 +32,7 @@ fn main() {
 
 fn tokenize(file_content: &str) {
     let mut lexical_error = false;
+    let mut line_count = 1;
 
     let mut chars = file_content.chars().peekable();
     while let Some(c) = chars.next() {
@@ -82,9 +83,10 @@ fn tokenize(file_content: &str) {
                     println!("SLASH / null")
                 }
             }
-            ' ' | '\t' | '\n' => {}
+            ' ' | '\t' => {}
+            '\n' => line_count += 1,
             c => {
-                eprintln!("[line 1] Error: Unexpected character: {c}");
+                eprintln!("[line {line_count}] Error: Unexpected character: {c}");
                 lexical_error = true;
             }
         }
