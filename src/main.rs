@@ -74,7 +74,9 @@ fn tokenize(file_content: &str) {
                 }
             }
             '/' => {
-                if chars.next_if_eq(&'/').is_none() {
+                if chars.next_if_eq(&'/').is_some() {
+                    for _ in chars.by_ref() {}
+                } else {
                     println!("SLASH / null")
                 }
             }
