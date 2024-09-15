@@ -122,13 +122,43 @@ fn tokenize(file_content: &str) {
                 }
             }
             c if c.is_ascii_digit() => {
-                let number_str = chars
-                    .by_ref()
-                    .take_while(|c| c.is_ascii_digit() || c == &'.')
-                    .fold(String::from(c), |mut acc, c| {
-                        acc.push(c);
-                        acc
-                    });
+                // let number_str = chars
+                //     .by_ref()
+                //     .take_while(|c| c.is_ascii_digit() || c == &'.')
+                //     .fold(String::from(c), |mut acc, c| {
+                //         acc.push(c);
+                //         acc
+                //     });
+                let mut number_str = String::from(c);
+
+                let mut first_dot = false;
+                while let Some(c) = chars.peek() {
+                    if c == &'.' && first_dot {
+                        break;
+                    }
+                    if c == &'.' {
+                        first_dot = true;
+                    }
+
+                    if !c.is_ascii_digit() {
+                        break;
+                    }
+
+                    number_str.push(*c);
+                }
+
+                // while chars
+                //     .by_ref()
+                //     .next_if(|c| matches!(c, '.' | '1'..='9'))
+                //     .is_some()
+                // {}
+
+                // chars.next_if_eq('0')
+                // chars.by_ref().take_while(|c| chars.peek().is_some());
+                // if chars.peek().is_some_and(|c| )
+                // for c in chars.by_ref() {
+
+                // }
 
                 let number: f64 = number_str.parse().unwrap();
 
