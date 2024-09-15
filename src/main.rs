@@ -138,10 +138,10 @@ fn tokenize(file_content: &str) {
 
                 let number: f64 = number_str.parse().unwrap();
 
-                if floating {
-                    println!("NUMBER {number_str} {number}");
-                } else {
+                if number.fract() == 0.0 {
                     println!("NUMBER {number_str} {number}.0");
+                } else {
+                    println!("NUMBER {number_str} {number}");
                 }
             }
             c => {
