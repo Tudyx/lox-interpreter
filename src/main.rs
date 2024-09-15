@@ -83,7 +83,7 @@ fn tokenize(file_content: &str) {
             }
             ' ' | '\t' => {}
             c => {
-                eprintln!("[line 1] Error: Unexpected character: {c}");
+                eprintln!("[line 1] Error: Unexpected character: {c:#?}");
                 lexical_error = true;
             }
         }
