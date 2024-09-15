@@ -90,23 +90,30 @@ fn tokenize(file_content: &str) {
             ' ' | '\t' => {}
             '\n' => line_count += 1,
             '"' => {
-                let literal =
-                    chars
-                        .by_ref()
-                        .take_while(|c| c != &'"')
-                        .fold(String::new(), |mut acc, c| {
-                            acc.push(c);
-                            acc
-                        });
-                eprintln!("literal = {literal}");
-                eprintln!("chars= {chars:?}");
-                // if chars.peek().is_none() {
-                //     eprintln!("[line {line_count}] Error: Unterminated string.");
-                //     lexical_error = true;
-                // }else {
+                // let literal =
+                //     chars
+                //         .by_ref()
+                //         .take_while(|c| c != &'"')
+                //         .fold(String::new(), |mut acc, c| {
+                //             acc.push(c);
+                //             acc
+                //         });
 
-                // }
-                println!("STRING \"{literal}\" {literal}");
+                let mut literal = String::new();
+                let mut ended = false;
+                for c in chars.by_ref() {
+                    if c == '"' {
+                        ended = true;
+                        break;
+                    }
+                    literal.push(c);
+                }
+                if ended {
+                    println!("STRING \"{literal}\" {literal}");
+                } else {
+                    eprintln!("[line {line_count}] Error: Unterminated string.");
+                    lexical_error = true;
+                }
             }
             c => {
                 eprintln!("[line {line_count}] Error: Unexpected character: {c}");
