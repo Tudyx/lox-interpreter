@@ -145,7 +145,7 @@ fn tokenize(file_content: &str) {
                 // We ignore reserved word for now
                 // while chars.next_if(|c| foo )
                 while let Some(c) = chars.peek() {
-                    if matches!(c, 'a'..='z' | 'A'..='Z' | '_' ) {
+                    if matches!(c, 'a'..='z' | 'A'..='Z' | '_' | '0'..='9' ) {
                         identifier.push(*c);
                         chars.next();
                     } else {
