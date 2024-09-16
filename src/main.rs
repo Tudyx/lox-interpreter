@@ -78,11 +78,7 @@ fn tokenize(file_content: &str) {
             '/' => {
                 // We ignore the rest of the line
                 if chars.next_if_eq(&'/').is_some() {
-                    while chars.by_ref().next().is_some() {
-                        if chars.peek().is_some_and(|c| c == &'\n') {
-                            break;
-                        }
-                    }
+                    while chars.next_if(|c| c != &'\n').is_some() {}
                 } else {
                     println!("SLASH / null")
                 }
