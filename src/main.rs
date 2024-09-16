@@ -140,6 +140,17 @@ fn tokenize(file_content: &str) {
                     println!("NUMBER {number_str} {number}");
                 }
             }
+            'a'..='z' | 'A'..='Z' | '_' => {
+                let mut identifier = String::from(c);
+                // We ignore reserved word for now
+                while let Some(c) = chars.peek() {
+                    if matches!(c, 'a'..='z' | 'A'..='Z' | '_' ) {
+                        identifier.push(*c);
+                        chars.next();
+                    }
+                }
+                println!("IDENTIFIER {identifier} null");
+            }
             c => {
                 eprintln!("[line {line_count}] Error: Unexpected character: {c}");
                 lexical_error = true;
