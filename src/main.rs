@@ -143,20 +143,18 @@ fn tokenize(file_content: &str) {
             'a'..='z' | 'A'..='Z' | '_' => {
                 let mut identifier = String::from(c);
                 // We ignore reserved word for now
+                // What we really want is a take while that doesn't consume the last character.
+                const AND: &str = "and";
                 while let Some(c) =
                     chars.next_if(|c| matches!(c, 'a'..='z' | 'A'..='Z' | '_' | '0'..='9' ))
                 {
                     identifier.push(c);
                 }
-                // while let Some(c) = chars.peek() {
-                //     if matches!(c, 'a'..='z' | 'A'..='Z' | '_' | '0'..='9' ) {
-                //         identifier.push(*c);
-                //         chars.next();
-                //     } else {
-                //         break;
-                //     }
-                // }
-                println!("IDENTIFIER {identifier} null");
+                if identifier == AND {
+                    println!("AND and null");
+                } else {
+                    println!("IDENTIFIER {identifier} null");
+                }
             }
             c => {
                 eprintln!("[line {line_count}] Error: Unexpected character: {c}");
