@@ -144,19 +144,28 @@ fn tokenize(file_content: &str) {
                 let mut identifier = String::from(c);
                 // We ignore reserved word for now
                 // What we really want is a take while that doesn't consume the last character.
-                const AND: &str = "and";
-                const CLASS: &str = "class";
                 while let Some(c) =
                     chars.next_if(|c| matches!(c, 'a'..='z' | 'A'..='Z' | '_' | '0'..='9' ))
                 {
                     identifier.push(c);
                 }
-                if identifier == AND {
-                    println!("AND and null");
-                } else if identifier == CLASS {
-                    println!("CLASS class null");
-                } else {
-                    println!("IDENTIFIER {identifier} null");
+                match identifier.as_str() {
+                    "and" => println!("AND and null"),
+                    "class" => println!("CLASS class null"),
+                    "else" => println!("ELSE else null"),
+                    "false" => println!("FALSE false null"),
+                    "for" => println!("FOR for null"),
+                    "fun" => println!("FUN fun null"),
+                    "if" => println!("IF if null"),
+                    "nil" => println!("NIL nil null"),
+                    "or" => println!("OR or null"),
+                    "return" => println!("RETURN return null"),
+                    "super" => println!("SUPER super null"),
+                    "this" => println!("THIS this null"),
+                    "true" => println!("TRUE true null"),
+                    "var" => println!("VAR var null"),
+                    "while" => println!("WHILE while null"),
+                    ident => println!("IDENTIFIER {ident} null"),
                 }
             }
             c => {
