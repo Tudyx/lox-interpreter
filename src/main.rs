@@ -143,15 +143,19 @@ fn tokenize(file_content: &str) {
             'a'..='z' | 'A'..='Z' | '_' => {
                 let mut identifier = String::from(c);
                 // We ignore reserved word for now
-                // while chars.next_if(|c| foo )
-                while let Some(c) = chars.peek() {
-                    if matches!(c, 'a'..='z' | 'A'..='Z' | '_' | '0'..='9' ) {
-                        identifier.push(*c);
-                        chars.next();
-                    } else {
-                        break;
-                    }
+                while let Some(c) =
+                    chars.next_if(|c| matches!(c, 'a'..='z' | 'A'..='Z' | '_' | '0'..='9' ))
+                {
+                    identifier.push(c);
                 }
+                // while let Some(c) = chars.peek() {
+                //     if matches!(c, 'a'..='z' | 'A'..='Z' | '_' | '0'..='9' ) {
+                //         identifier.push(*c);
+                //         chars.next();
+                //     } else {
+                //         break;
+                //     }
+                // }
                 println!("IDENTIFIER {identifier} null");
             }
             c => {
