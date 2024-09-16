@@ -145,6 +145,7 @@ fn tokenize(file_content: &str) {
                 // We ignore reserved word for now
                 // What we really want is a take while that doesn't consume the last character.
                 const AND: &str = "and";
+                const CLASS: &str = "class";
                 while let Some(c) =
                     chars.next_if(|c| matches!(c, 'a'..='z' | 'A'..='Z' | '_' | '0'..='9' ))
                 {
@@ -152,6 +153,8 @@ fn tokenize(file_content: &str) {
                 }
                 if identifier == AND {
                     println!("AND and null");
+                } else if identifier == CLASS {
+                    println!("CLASS class null");
                 } else {
                     println!("IDENTIFIER {identifier} null");
                 }
