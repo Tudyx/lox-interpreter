@@ -165,6 +165,7 @@ fn tokenize(file_content: &str) {
                     "true" => println!("TRUE true null"),
                     "var" => println!("VAR var null"),
                     "while" => println!("WHILE while null"),
+                    "print" => println!("PRINT print null"),
                     ident => println!("IDENTIFIER {ident} null"),
                 }
             }
