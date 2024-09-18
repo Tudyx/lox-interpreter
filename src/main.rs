@@ -54,6 +54,7 @@ fn main() {
                             println!("{number}")
                         }
                     }
+                    Token::String(string) => println!("{string}"),
                     _ => panic!("unhandled token"),
                 }
             }
