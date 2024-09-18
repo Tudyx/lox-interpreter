@@ -47,6 +47,13 @@ fn main() {
                     Token::Nil => println!("nil"),
                     Token::True => println!("true"),
                     Token::False => println!("false"),
+                    Token::Number(number, _) => {
+                        if number.fract() == 0.0 {
+                            println!("{number}.0")
+                        } else {
+                            println!("{number}")
+                        }
+                    }
                     _ => panic!("unhandled token"),
                 }
             }
