@@ -62,8 +62,8 @@ fn tokenize(file_content: &str) -> Result<Vec<Token>, Vec<Token>> {
     let mut line_count = 1;
     let mut tokens = Vec::new();
 
-    let mut chars = file_content.chars().peekable();
-    while let Some(c) = chars.next() {
+    let mut chars = file_content.chars().enumerate().peekable();
+    while let Some((i, c)) = chars.next() {
         let token = match c {
             '(' => Token::LeftParen,
             ')' => Token::RightParen,
@@ -76,28 +76,28 @@ fn tokenize(file_content: &str) -> Result<Vec<Token>, Vec<Token>> {
             ';' => Token::Semicolon,
             '*' => Token::Star,
             '=' => {
-                if chars.next_if_eq(&'=').is_some() {
+                if chars.next_if(|(_, c)| c == &'=').is_some() {
                     Token::EqualEqual
                 } else {
                     Token::Equal
                 }
             }
             '!' => {
-                if chars.next_if_eq(&'=').is_some() {
+                if chars.next_if(|(_, c)| c == &'=').is_some() {
                     Token::BangEqual
                 } else {
                     Token::Bang
                 }
             }
             '<' => {
-                if chars.next_if_eq(&'=').is_some() {
+                if chars.next_if(|(_, c)| c == &'=').is_some() {
                     Token::LessEqual
                 } else {
                     Token::Less
                 }
             }
             '>' => {
-                if chars.next_if_eq(&'=').is_some() {
+                if chars.next_if(|(_, c)| c == &'=').is_some() {
                     Token::GreaterEqual
                 } else {
                     Token::Greater
@@ -105,8 +105,8 @@ fn tokenize(file_content: &str) -> Result<Vec<Token>, Vec<Token>> {
             }
             '/' => {
                 // We ignore the rest of the line
-                if chars.next_if_eq(&'/').is_some() {
-                    while chars.next_if(|c| c != &'\n').is_some() {}
+                if chars.next_if(|(_, c)| c == &'/').is_some() {
+                    while chars.next_if(|(_, c)| c != &'\n').is_some() {}
                     continue;
                 }
                 Token::Slash
@@ -118,39 +118,24 @@ fn tokenize(file_content: &str) -> Result<Vec<Token>, Vec<Token>> {
                 line_count += 1;
                 continue;
             }
-            '"' => {
-                let mut ended = false;
-                let literal = chars
-                    .by_ref()
-                    .inspect(|c| {
-                        if c == &'"' {
-                            ended = true;
-                        }
-                    })
-                    .take_while(|c| c != &'"')
-                    .fold(String::new(), |mut acc, c| {
-                        acc.push(c);
-                        acc
-                    });
-                if ended {
-                    Token::String(literal)
-                } else {
+            '"' => match chars.position(|(_, c)| c == '"') {
+                Some(end) => Token::String(&file_content[i + 1..=i + end]),
+                None => {
                     eprintln!("[line {line_count}] Error: Unterminated string.");
                     lexical_error = true;
                     continue;
                 }
-            }
+            },
             '0'..='9' => {
-                let mut number_str = String::from(c);
-
                 let mut first_dot = false;
-                while let Some(c) = chars.peek() {
+                let mut end = i;
+                while let Some((_, c)) = chars.peek() {
                     if c == &'.' && first_dot {
                         break;
                     }
                     if c == &'.' {
                         first_dot = true;
-                        number_str.push(*c);
+                        end += 1;
                         chars.next();
                         continue;
                     }
@@ -158,23 +143,24 @@ fn tokenize(file_content: &str) -> Result<Vec<Token>, Vec<Token>> {
                     if !c.is_ascii_digit() {
                         break;
                     }
-                    number_str.push(*c);
+                    end += 1;
                     chars.next();
                 }
 
+                let number_str = &file_content[i..=end];
                 let number: f64 = number_str.parse().unwrap();
                 Token::Number(number, number_str)
             }
             'a'..='z' | 'A'..='Z' | '_' => {
-                let mut identifier = String::from(c);
-                // We ignore reserved word for now
-                // What we really want is a take while that doesn't consume the last character.
-                while let Some(c) =
-                    chars.next_if(|c| matches!(c, 'a'..='z' | 'A'..='Z' | '_' | '0'..='9' ))
+                let mut end = i;
+                while chars
+                    .next_if(|(_, c)| matches!(c, 'a'..='z' | 'A'..='Z' | '_' | '0'..='9' ))
+                    .is_some()
                 {
-                    identifier.push(c);
+                    end += 1;
                 }
-                match identifier.as_str() {
+                let identifier = &file_content[i..=end];
+                match identifier {
                     "and" => Token::And,
                     "class" => Token::Class,
                     "else" => Token::Else,
@@ -191,7 +177,7 @@ fn tokenize(file_content: &str) -> Result<Vec<Token>, Vec<Token>> {
                     "var" => Token::Var,
                     "while" => Token::While,
                     "print" => Token::Print,
-                    ident => Token::Identifier(ident.into()),
+                    ident => Token::Identifier(ident),
                 }
             }
             c => {
@@ -210,7 +196,7 @@ fn tokenize(file_content: &str) -> Result<Vec<Token>, Vec<Token>> {
 }
 
 #[derive(Debug, PartialEq)]
-enum Token {
+enum Token<'de> {
     LeftParen,
     RightParen,
     LeftBrace,
@@ -230,9 +216,9 @@ enum Token {
     GreaterEqual,
     Greater,
     Slash,
-    String(String),
-    Number(f64, String),
-    Identifier(String),
+    String(&'de str),
+    Number(f64, &'de str),
+    Identifier(&'de str),
     And,
     Class,
     Else,
@@ -251,7 +237,7 @@ enum Token {
     Print,
 }
 
-impl fmt::Display for Token {
+impl fmt::Display for Token<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Token::LeftParen => write!(f, "LEFT_PAREN ( null"),
