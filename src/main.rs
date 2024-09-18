@@ -108,9 +108,8 @@ fn tokenize(file_content: &str) -> Result<Vec<Token>, Vec<Token>> {
                 if chars.next_if_eq(&'/').is_some() {
                     while chars.next_if(|c| c != &'\n').is_some() {}
                     continue;
-                } else {
-                    Token::Slash
                 }
+                Token::Slash
             }
             ' ' | '\t' => {
                 continue;
@@ -141,7 +140,7 @@ fn tokenize(file_content: &str) -> Result<Vec<Token>, Vec<Token>> {
                     continue;
                 }
             }
-            c if c.is_ascii_digit() => {
+            '0'..='9' => {
                 let mut number_str = String::from(c);
 
                 let mut first_dot = false;
