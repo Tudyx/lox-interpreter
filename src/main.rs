@@ -1,6 +1,8 @@
 use core::fmt;
+use core::panic;
 use std::env;
 use std::fs;
+use std::iter::Peekable;
 
 use lex::tokenize;
 use lex::Token;
@@ -46,7 +48,8 @@ fn main() {
         }
         "parse" => {
             let tokens = tokenize(&file_contents).unwrap();
-            let token_tree = parse_tokens(&tokens);
+            let tokens = &mut tokens.into_iter().peekable();
+            let token_tree = parse_tokens(tokens);
             println!("{token_tree}");
         }
         _ => {
@@ -54,51 +57,46 @@ fn main() {
         }
     }
 }
-
-fn parse_tokens<'de>(tokens: &[Token<'de>]) -> TokenTree<'de> {
+fn parse_tokens<'de>(tokens: &mut Peekable<impl Iterator<Item = Token<'de>>>) -> TokenTree<'de> {
     eprintln!("**** parse tokens ****");
-    dbg!(tokens);
-    let mut tokens_iter = tokens.iter().enumerate().peekable();
-    let mut token_tree = TokenTree::Primary(Primary::Nil);
-    while let Some((i, token)) = tokens_iter.next() {
-        dbg!(i);
-        token_tree = match token {
+    if let Some(token) = tokens.next() {
+        return match token {
             Token::Nil => TokenTree::Primary(Primary::Nil),
             Token::True => TokenTree::Primary(Primary::True),
             Token::False => TokenTree::Primary(Primary::False),
-            Token::Number(n, _) => TokenTree::Primary(Primary::Number(*n)),
+            Token::Number(n, _) => TokenTree::Primary(Primary::Number(n)),
             Token::String(s) => TokenTree::Primary(Primary::String(s)),
             Token::LeftParen => {
-                let token = parse_tokens(&tokens[i + 1..tokens.len()]);
-                dbg!(&token);
-                while tokens_iter.next().is_some() {}
-
-                TokenTree::Primary(Primary::Group(Box::new(token)))
+                let token_tree = TokenTree::Primary(Primary::Group(Box::new(parse_tokens(tokens))));
+                if !tokens
+                    .next()
+                    .is_some_and(|token| token == Token::RightParen)
+                {
+                    panic!("Miss Right Paren");
+                }
+                token_tree
             }
-            Token::RightParen => {
-                eprintln!("Encoutered right paren");
-                continue;
+            // prefix operator
+            Token::Minus => TokenTree::Unary(Unary::Minus(Box::new(parse_tokens(tokens)))),
+            Token::Bang => TokenTree::Unary(Unary::Bang(Box::new(parse_tokens(tokens)))),
+            // infix operator
+            Token::Star => {
+                todo!()
             }
-            Token::Minus => {
-                let unary = Unary::Minus(Box::new(parse_tokens(&tokens[i + 1..tokens.len()])));
-                while tokens_iter.next().is_some() {}
-                TokenTree::Unary(unary)
-            }
-            Token::Bang => {
-                let unary = Unary::Bang(Box::new(parse_tokens(&tokens[i + 1..tokens.len()])));
-                while tokens_iter.next().is_some() {}
-                TokenTree::Unary(unary)
+            Token::Slash => {
+                todo!()
             }
             _ => panic!("unhandled token"),
         };
     }
-    token_tree
+    TokenTree::Primary(Primary::Nil)
 }
 
 #[derive(Debug, PartialEq)]
 enum TokenTree<'de> {
     Primary(Primary<'de>),
     Unary(Unary<'de>),
+    Factor(Factor<'de>),
 }
 
 impl fmt::Display for TokenTree<'_> {
@@ -106,6 +104,7 @@ impl fmt::Display for TokenTree<'_> {
         match self {
             TokenTree::Primary(prim) => write!(f, "{prim}"),
             TokenTree::Unary(unary) => write!(f, "{unary}"),
+            TokenTree::Factor(factor) => write!(f, "{factor}"),
         }
     }
 }
@@ -143,6 +142,21 @@ impl fmt::Display for Unary<'_> {
         match self {
             Unary::Bang(tt) => write!(f, "(! {tt})"),
             Unary::Minus(tt) => write!(f, "(- {tt})"),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+enum Factor<'de> {
+    Slash(Box<TokenTree<'de>>, Box<TokenTree<'de>>),
+    Star(Box<TokenTree<'de>>, Box<TokenTree<'de>>),
+}
+
+impl fmt::Display for Factor<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Factor::Slash(left, right) => write!(f, "(/ {left} {right})"),
+            Factor::Star(left, right) => write!(f, "(* {left} {right})"),
         }
     }
 }
