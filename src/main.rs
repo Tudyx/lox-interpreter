@@ -58,9 +58,8 @@ fn main() {
     }
 }
 fn parse_tokens<'de>(tokens: &mut Peekable<impl Iterator<Item = Token<'de>>>) -> TokenTree<'de> {
-    eprintln!("**** parse tokens ****");
-    if let Some(token) = tokens.next() {
-        return match token {
+    let mut lhs = if let Some(token) = tokens.next() {
+        match token {
             Token::Nil => TokenTree::Primary(Primary::Nil),
             Token::True => TokenTree::Primary(Primary::True),
             Token::False => TokenTree::Primary(Primary::False),
@@ -80,16 +79,32 @@ fn parse_tokens<'de>(tokens: &mut Peekable<impl Iterator<Item = Token<'de>>>) ->
             Token::Minus => TokenTree::Unary(Unary::Minus(Box::new(parse_tokens(tokens)))),
             Token::Bang => TokenTree::Unary(Unary::Bang(Box::new(parse_tokens(tokens)))),
             // infix operator
-            Token::Star => {
-                todo!()
-            }
-            Token::Slash => {
-                todo!()
+            Token::Star | Token::Slash => {
+                // We cannot start by them, and we consume them below
+                panic!("Unexpected '/' or '*'")
             }
             _ => panic!("unhandled token"),
-        };
+        }
+    } else {
+        TokenTree::Primary(Primary::Nil)
+    };
+
+    if let Some(token) = tokens.peek() {
+        match token {
+            Token::Star => {
+                tokens.next();
+                let rhs = parse_tokens(tokens);
+                lhs = TokenTree::Factor(Factor::Star(Box::new(lhs), Box::new(rhs)));
+            }
+            Token::Slash => {
+                tokens.next();
+                let rhs = parse_tokens(tokens);
+                lhs = TokenTree::Factor(Factor::Slash(Box::new(lhs), Box::new(rhs)));
+            }
+            _ => {}
+        }
     }
-    TokenTree::Primary(Primary::Nil)
+    lhs
 }
 
 #[derive(Debug, PartialEq)]
