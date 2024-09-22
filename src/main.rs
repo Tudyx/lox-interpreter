@@ -56,9 +56,12 @@ fn main() {
 }
 
 fn parse_token<'de>(tokens: &[Token<'de>]) -> TokenTree<'de> {
-    let mut tokens_iter = tokens.into_iter().enumerate().peekable();
+    eprintln!("**** parse tokens ****");
+    dbg!(tokens);
+    let mut tokens_iter = tokens.iter().enumerate().peekable();
     let mut token_tree = TokenTree::Primary(Primary::Nil);
     while let Some((i, token)) = tokens_iter.next() {
+        dbg!(i);
         token_tree = match token {
             Token::Nil => TokenTree::Primary(Primary::Nil),
             Token::True => TokenTree::Primary(Primary::True),
@@ -66,28 +69,23 @@ fn parse_token<'de>(tokens: &[Token<'de>]) -> TokenTree<'de> {
             Token::Number(n, _) => TokenTree::Primary(Primary::Number(*n)),
             Token::String(s) => TokenTree::Primary(Primary::String(s)),
             Token::LeftParen => {
-                let right_paren_pos = tokens_iter
-                    .position(|(_, token)| token == &Token::RightParen)
-                    .unwrap();
-                TokenTree::Primary(Primary::Group(Box::new(parse_token(
-                    &tokens[i + 1..i + right_paren_pos],
-                ))))
+                let token = parse_token(&tokens[i + 1..tokens.len()]);
+                dbg!(&token);
+                while tokens_iter.next().is_some() {}
+
+                TokenTree::Primary(Primary::Group(Box::new(token)))
+            }
+            Token::RightParen => {
+                eprintln!("Encoutered right paren");
+                continue;
             }
             _ => panic!("unhandled token"),
         };
     }
-    return token_tree;
+    token_tree
 }
 
-fn parse_group<'de>() -> TokenTree<'de> {
-    todo!()
-}
-
-enum S {
-    Atom(char),
-    Cons(char, Vec<S>),
-}
-
+#[derive(Debug, PartialEq)]
 enum TokenTree<'de> {
     Primary(Primary<'de>),
 }
@@ -100,6 +98,7 @@ impl fmt::Display for TokenTree<'_> {
     }
 }
 
+#[derive(Debug, PartialEq)]
 enum Primary<'de> {
     String(&'de str),
     Number(f64),
@@ -117,15 +116,7 @@ impl fmt::Display for Primary<'_> {
             Primary::True => write!(f, "true"),
             Primary::False => write!(f, "false"),
             Primary::Nil => write!(f, "nil"),
-            Primary::Group(tt) => write!(f, "{tt}"),
+            Primary::Group(tt) => write!(f, "(group {tt})"),
         }
-    }
-}
-
-struct Equality {}
-
-impl fmt::Display for Equality {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        todo!()
     }
 }
