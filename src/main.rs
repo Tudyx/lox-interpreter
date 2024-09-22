@@ -89,21 +89,24 @@ fn parse_tokens<'de>(tokens: &mut Peekable<impl Iterator<Item = Token<'de>>>) ->
         TokenTree::Primary(Primary::Nil)
     };
 
-    if let Some(token) = tokens.peek() {
+    // Here we don't passe the rest of the token to the recursive call,
+    // so we must loop ourself
+    while let Some(token) = tokens.peek() {
         match token {
             Token::Star => {
                 tokens.next();
-                let rhs = parse_tokens(tokens);
+                let rhs = parse_tokens(&mut std::iter::once(tokens.next().unwrap()).peekable());
                 lhs = TokenTree::Factor(Factor::Star(Box::new(lhs), Box::new(rhs)));
             }
             Token::Slash => {
                 tokens.next();
-                let rhs = parse_tokens(tokens);
+                let rhs = parse_tokens(&mut std::iter::once(tokens.next().unwrap()).peekable());
                 lhs = TokenTree::Factor(Factor::Slash(Box::new(lhs), Box::new(rhs)));
             }
-            _ => {}
+            _ => break,
         }
     }
+
     lhs
 }
 
