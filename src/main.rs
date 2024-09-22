@@ -46,7 +46,7 @@ fn main() {
         }
         "parse" => {
             let tokens = tokenize(&file_contents).unwrap();
-            let token_tree = parse_token(&tokens);
+            let token_tree = parse_tokens(&tokens);
             println!("{token_tree}");
         }
         _ => {
@@ -55,7 +55,7 @@ fn main() {
     }
 }
 
-fn parse_token<'de>(tokens: &[Token<'de>]) -> TokenTree<'de> {
+fn parse_tokens<'de>(tokens: &[Token<'de>]) -> TokenTree<'de> {
     eprintln!("**** parse tokens ****");
     dbg!(tokens);
     let mut tokens_iter = tokens.iter().enumerate().peekable();
@@ -69,7 +69,7 @@ fn parse_token<'de>(tokens: &[Token<'de>]) -> TokenTree<'de> {
             Token::Number(n, _) => TokenTree::Primary(Primary::Number(*n)),
             Token::String(s) => TokenTree::Primary(Primary::String(s)),
             Token::LeftParen => {
-                let token = parse_token(&tokens[i + 1..tokens.len()]);
+                let token = parse_tokens(&tokens[i + 1..tokens.len()]);
                 dbg!(&token);
                 while tokens_iter.next().is_some() {}
 
@@ -78,6 +78,16 @@ fn parse_token<'de>(tokens: &[Token<'de>]) -> TokenTree<'de> {
             Token::RightParen => {
                 eprintln!("Encoutered right paren");
                 continue;
+            }
+            Token::Minus => {
+                let unary = Unary::Minus(Box::new(parse_tokens(&tokens[i + 1..tokens.len()])));
+                while tokens_iter.next().is_some() {}
+                TokenTree::Unary(unary)
+            }
+            Token::Bang => {
+                let unary = Unary::Bang(Box::new(parse_tokens(&tokens[i + 1..tokens.len()])));
+                while tokens_iter.next().is_some() {}
+                TokenTree::Unary(unary)
             }
             _ => panic!("unhandled token"),
         };
@@ -88,12 +98,14 @@ fn parse_token<'de>(tokens: &[Token<'de>]) -> TokenTree<'de> {
 #[derive(Debug, PartialEq)]
 enum TokenTree<'de> {
     Primary(Primary<'de>),
+    Unary(Unary<'de>),
 }
 
 impl fmt::Display for TokenTree<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             TokenTree::Primary(prim) => write!(f, "{prim}"),
+            TokenTree::Unary(unary) => write!(f, "{unary}"),
         }
     }
 }
@@ -117,6 +129,20 @@ impl fmt::Display for Primary<'_> {
             Primary::False => write!(f, "false"),
             Primary::Nil => write!(f, "nil"),
             Primary::Group(tt) => write!(f, "(group {tt})"),
+        }
+    }
+}
+#[derive(Debug, PartialEq)]
+enum Unary<'de> {
+    Bang(Box<TokenTree<'de>>),
+    Minus(Box<TokenTree<'de>>),
+}
+
+impl fmt::Display for Unary<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Unary::Bang(tt) => write!(f, "(! {tt})"),
+            Unary::Minus(tt) => write!(f, "(- {tt})"),
         }
     }
 }
