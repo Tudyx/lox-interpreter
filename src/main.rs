@@ -49,7 +49,7 @@ fn main() {
         "parse" => {
             let tokens = tokenize(&file_contents).unwrap();
             let tokens = &mut tokens.into_iter().peekable();
-            let token_tree = parse_tokens(tokens);
+            let token_tree = parse_tokens(tokens, 0);
             println!("{token_tree}");
         }
         _ => {
@@ -57,8 +57,12 @@ fn main() {
         }
     }
 }
-fn parse_tokens<'de>(tokens: &mut Peekable<impl Iterator<Item = Token<'de>>>) -> TokenTree<'de> {
+fn parse_tokens<'de>(
+    tokens: &mut Peekable<impl Iterator<Item = Token<'de>>>,
+    min_bp: u8,
+) -> TokenTree<'de> {
     let mut lhs = if let Some(token) = tokens.next() {
+        // eprintln!("token {token}");
         match token {
             Token::Nil => TokenTree::Primary(Primary::Nil),
             Token::True => TokenTree::Primary(Primary::True),
@@ -66,7 +70,8 @@ fn parse_tokens<'de>(tokens: &mut Peekable<impl Iterator<Item = Token<'de>>>) ->
             Token::Number(n, _) => TokenTree::Primary(Primary::Number(n)),
             Token::String(s) => TokenTree::Primary(Primary::String(s)),
             Token::LeftParen => {
-                let token_tree = TokenTree::Primary(Primary::Group(Box::new(parse_tokens(tokens))));
+                let token_tree =
+                    TokenTree::Primary(Primary::Group(Box::new(parse_tokens(tokens, 0))));
                 if !tokens
                     .next()
                     .is_some_and(|token| token == Token::RightParen)
@@ -76,8 +81,8 @@ fn parse_tokens<'de>(tokens: &mut Peekable<impl Iterator<Item = Token<'de>>>) ->
                 token_tree
             }
             // prefix operator
-            Token::Minus => TokenTree::Unary(Unary::Minus(Box::new(parse_tokens(tokens)))),
-            Token::Bang => TokenTree::Unary(Unary::Bang(Box::new(parse_tokens(tokens)))),
+            Token::Minus => TokenTree::Unary(Unary::Minus(Box::new(parse_tokens(tokens, 5)))),
+            Token::Bang => TokenTree::Unary(Unary::Bang(Box::new(parse_tokens(tokens, 5)))),
             // infix operator
             Token::Star | Token::Slash => {
                 // We cannot start by them, and we consume them below
@@ -92,15 +97,30 @@ fn parse_tokens<'de>(tokens: &mut Peekable<impl Iterator<Item = Token<'de>>>) ->
     // Here we don't passe the rest of the token to the recursive call,
     // so we must loop ourself
     while let Some(token) = tokens.peek() {
+        eprintln!("peeked token {token}");
         match token {
             Token::Star => {
-                tokens.next();
-                let rhs = parse_tokens(&mut std::iter::once(tokens.next().unwrap()).peekable());
+                let bp = 3;
+                if bp > min_bp {
+                    tokens.next();
+                } else {
+                    break;
+                }
+                // Here we want to pass the next items until we encounter something that have the same level of
+                // precedence that the Star. If it's lower, for instance a +, we stop
+                // let rhs = parse_tokens(&mut std::iter::once(tokens.next().unwrap()).peekable());
+                let rhs = parse_tokens(tokens, bp);
                 lhs = TokenTree::Factor(Factor::Star(Box::new(lhs), Box::new(rhs)));
             }
             Token::Slash => {
-                tokens.next();
-                let rhs = parse_tokens(&mut std::iter::once(tokens.next().unwrap()).peekable());
+                let bp = 3;
+                if bp > min_bp {
+                    tokens.next();
+                } else {
+                    break;
+                }
+                // let rhs = parse_tokens(&mut std::iter::once(tokens.next().unwrap()).peekable());
+                let rhs = parse_tokens(tokens, bp);
                 lhs = TokenTree::Factor(Factor::Slash(Box::new(lhs), Box::new(rhs)));
             }
             _ => break,
@@ -109,6 +129,8 @@ fn parse_tokens<'de>(tokens: &mut Peekable<impl Iterator<Item = Token<'de>>>) ->
 
     lhs
 }
+
+// fn infix_binding_power() -> (u8, u8) {}
 
 #[derive(Debug, PartialEq)]
 enum TokenTree<'de> {
