@@ -1,19 +1,6 @@
 use std::fmt;
 
-// struct Lexer<'de> {
-//     file_content: &'de str,
-// }
-
-// impl<'de> Iterator for Lexer<'de> {
-//     type Item = Result<Token<'de>, ()>;
-
-//     fn next(&mut self) -> Option<Self::Item> {
-//         todo!()
-//     }
-// }
-
-pub fn tokenize(file_content: &str) -> Result<Vec<Token>, Vec<Token>> {
-    let mut lexical_error = false;
+pub fn tokenize(file_content: &str) -> Vec<Result<Token, LexingError>> {
     let mut line_count = 1;
     let mut tokens = Vec::new();
 
@@ -76,8 +63,11 @@ pub fn tokenize(file_content: &str) -> Result<Vec<Token>, Vec<Token>> {
             '"' => match chars.position(|(_, c)| c == '"') {
                 Some(end) => Token::String(&file_content[i + 1..=i + end]),
                 None => {
-                    eprintln!("[line {line_count}] Error: Unterminated string.");
-                    lexical_error = true;
+                    tokens.push(Err(LexingError {
+                        kind: LexingErrorKind::UnterminatedString,
+                        line_count,
+                    }));
+
                     continue;
                 }
             },
@@ -136,18 +126,16 @@ pub fn tokenize(file_content: &str) -> Result<Vec<Token>, Vec<Token>> {
                 }
             }
             c => {
-                eprintln!("[line {line_count}] Error: Unexpected character: {c}");
-                lexical_error = true;
+                tokens.push(Err(LexingError {
+                    kind: LexingErrorKind::UnexpectedCharacter(c),
+                    line_count,
+                }));
                 continue;
             }
         };
-        tokens.push(token);
+        tokens.push(Ok(token));
     }
-    if lexical_error {
-        Err(tokens)
-    } else {
-        Ok(tokens)
-    }
+    tokens
 }
 
 #[derive(Debug, PartialEq)]
@@ -235,4 +223,30 @@ impl fmt::Display for Token<'_> {
             Token::Print => write!(f, "PRINT print null"),
         }
     }
+}
+#[derive(Debug)]
+pub struct LexingError {
+    kind: LexingErrorKind,
+    line_count: usize,
+}
+
+impl fmt::Display for LexingError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let line_count = self.line_count;
+        write!(f, "[line {line_count}] Error: ")?;
+        match self.kind {
+            LexingErrorKind::UnterminatedString => {
+                write!(f, "Unterminated string.")
+            }
+            LexingErrorKind::UnexpectedCharacter(c) => {
+                write!(f, "Unexpected character: {c}")
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum LexingErrorKind {
+    UnterminatedString,
+    UnexpectedCharacter(char),
 }
