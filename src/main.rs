@@ -1,8 +1,8 @@
 mod lex;
 mod parse;
 
+use crate::lex::Lexer;
 use crate::parse::parse_tokens;
-use lex::tokenize;
 use std::env;
 use std::fs;
 
@@ -22,10 +22,10 @@ fn main() {
 
     match command.as_str() {
         "tokenize" => {
+            let mut lexical_error = false;
             if !file_contents.is_empty() {
-                let tokens = tokenize(&file_contents);
-                let mut lexical_error = false;
-                for token in tokens {
+                let lexer = Lexer::new(&file_contents);
+                for token in lexer {
                     match token {
                         Ok(token) => println!("{token}"),
                         Err(err) => {
@@ -34,19 +34,17 @@ fn main() {
                         }
                     }
                 }
-                println!("EOF  null"); // Placeholder, remove this line when implementing the scanner
-                if lexical_error {
-                    std::process::exit(65);
-                }
-            } else {
-                println!("EOF  null"); // Placeholder, remove this line when implementing the scanner
+            }
+            println!("EOF  null");
+            if lexical_error {
+                std::process::exit(65);
             }
         }
         "parse" => {
-            let tokens = tokenize(&file_contents);
-            let Ok(tokens) = tokens.into_iter().collect::<Result<Vec<_>, _>>() else {
-                std::process::exit(65);
-            };
+            let tokens = Lexer::new(&file_contents).map(|token| match token {
+                Ok(token) => token,
+                Err(_) => std::process::exit(65),
+            });
             let tokens = &mut tokens.into_iter().peekable();
             let Ok(token_tree) = parse_tokens(tokens, 0) else {
                 std::process::exit(65);

@@ -1,141 +1,159 @@
-use std::fmt;
+use std::{
+    fmt,
+    iter::{Enumerate, Peekable},
+    str::Chars,
+};
 
-pub fn tokenize(file_content: &str) -> Vec<Result<Token, LexingError>> {
-    let mut line_count = 1;
-    let mut tokens = Vec::new();
+pub struct Lexer<'de> {
+    file_content: &'de str,
+    chars: Peekable<Enumerate<Chars<'de>>>,
+    line_count: usize,
+}
 
-    let mut chars = file_content.chars().enumerate().peekable();
-    while let Some((i, c)) = chars.next() {
-        let token = match c {
-            '(' => Token::LeftParen,
-            ')' => Token::RightParen,
-            '{' => Token::LeftBrace,
-            '}' => Token::RightBrace,
-            ',' => Token::Comma,
-            '.' => Token::Dot,
-            '-' => Token::Minus,
-            '+' => Token::Plus,
-            ';' => Token::Semicolon,
-            '*' => Token::Star,
-            '=' => {
-                if chars.next_if(|(_, c)| c == &'=').is_some() {
-                    Token::EqualEqual
-                } else {
-                    Token::Equal
-                }
-            }
-            '!' => {
-                if chars.next_if(|(_, c)| c == &'=').is_some() {
-                    Token::BangEqual
-                } else {
-                    Token::Bang
-                }
-            }
-            '<' => {
-                if chars.next_if(|(_, c)| c == &'=').is_some() {
-                    Token::LessEqual
-                } else {
-                    Token::Less
-                }
-            }
-            '>' => {
-                if chars.next_if(|(_, c)| c == &'=').is_some() {
-                    Token::GreaterEqual
-                } else {
-                    Token::Greater
-                }
-            }
-            '/' => {
-                // We ignore the rest of the line
-                if chars.next_if(|(_, c)| c == &'/').is_some() {
-                    while chars.next_if(|(_, c)| c != &'\n').is_some() {}
-                    continue;
-                }
-                Token::Slash
-            }
-            ' ' | '\t' => {
-                continue;
-            }
-            '\n' => {
-                line_count += 1;
-                continue;
-            }
-            '"' => match chars.position(|(_, c)| c == '"') {
-                Some(end) => Token::String(&file_content[i + 1..=i + end]),
-                None => {
-                    tokens.push(Err(LexingError {
-                        kind: LexingErrorKind::UnterminatedString,
-                        line_count,
-                    }));
+impl<'de> Lexer<'de> {
+    pub fn new(file_content: &'de str) -> Self {
+        Self {
+            file_content,
+            chars: file_content.chars().enumerate().peekable(),
+            line_count: 1,
+        }
+    }
+}
 
-                    continue;
-                }
-            },
-            '0'..='9' => {
-                let mut first_dot = false;
-                let mut end = i;
-                while let Some((_, c)) = chars.peek() {
-                    if c == &'.' && first_dot {
-                        break;
+impl<'de> Iterator for Lexer<'de> {
+    type Item = Result<Token<'de>, LexingError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some((i, c)) = self.chars.next() {
+            let token = match c {
+                '(' => Token::LeftParen,
+                ')' => Token::RightParen,
+                '{' => Token::LeftBrace,
+                '}' => Token::RightBrace,
+                ',' => Token::Comma,
+                '.' => Token::Dot,
+                '-' => Token::Minus,
+                '+' => Token::Plus,
+                ';' => Token::Semicolon,
+                '*' => Token::Star,
+                '=' => {
+                    if self.chars.next_if(|(_, c)| c == &'=').is_some() {
+                        Token::EqualEqual
+                    } else {
+                        Token::Equal
                     }
-                    if c == &'.' {
-                        first_dot = true;
-                        end += 1;
-                        chars.next();
+                }
+                '!' => {
+                    if self.chars.next_if(|(_, c)| c == &'=').is_some() {
+                        Token::BangEqual
+                    } else {
+                        Token::Bang
+                    }
+                }
+                '<' => {
+                    if self.chars.next_if(|(_, c)| c == &'=').is_some() {
+                        Token::LessEqual
+                    } else {
+                        Token::Less
+                    }
+                }
+                '>' => {
+                    if self.chars.next_if(|(_, c)| c == &'=').is_some() {
+                        Token::GreaterEqual
+                    } else {
+                        Token::Greater
+                    }
+                }
+                '/' => {
+                    // We ignore the rest of the line
+                    if self.chars.next_if(|(_, c)| c == &'/').is_some() {
+                        while self.chars.next_if(|(_, c)| c != &'\n').is_some() {}
                         continue;
                     }
-
-                    if !c.is_ascii_digit() {
-                        break;
+                    Token::Slash
+                }
+                ' ' | '\t' => {
+                    continue;
+                }
+                '\n' => {
+                    self.line_count += 1;
+                    continue;
+                }
+                '"' => match self.chars.position(|(_, c)| c == '"') {
+                    Some(end) => Token::String(&self.file_content[i + 1..=i + end]),
+                    None => {
+                        return Some(Err(LexingError {
+                            kind: LexingErrorKind::UnterminatedString,
+                            line_count: self.line_count,
+                        }));
                     }
-                    end += 1;
-                    chars.next();
-                }
+                },
+                '0'..='9' => {
+                    let mut first_dot = false;
+                    let mut end = i;
+                    while let Some((_, c)) = self.chars.peek() {
+                        if c == &'.' && first_dot {
+                            break;
+                        }
+                        if c == &'.' {
+                            first_dot = true;
+                            end += 1;
+                            self.chars.next();
+                            continue;
+                        }
 
-                let number_str = &file_content[i..=end];
-                let number: f64 = number_str.parse().unwrap();
-                Token::Number(number, number_str)
-            }
-            'a'..='z' | 'A'..='Z' | '_' => {
-                let mut end = i;
-                while chars
-                    .next_if(|(_, c)| matches!(c, 'a'..='z' | 'A'..='Z' | '_' | '0'..='9' ))
-                    .is_some()
-                {
-                    end += 1;
+                        if !c.is_ascii_digit() {
+                            break;
+                        }
+                        end += 1;
+                        self.chars.next();
+                    }
+
+                    let number_str = &self.file_content[i..=end];
+                    let number: f64 = number_str.parse().unwrap();
+                    Token::Number(number, number_str)
                 }
-                let identifier = &file_content[i..=end];
-                match identifier {
-                    "and" => Token::And,
-                    "class" => Token::Class,
-                    "else" => Token::Else,
-                    "false" => Token::False,
-                    "for" => Token::For,
-                    "fun" => Token::Fun,
-                    "if" => Token::If,
-                    "nil" => Token::Nil,
-                    "or" => Token::Or,
-                    "return" => Token::Return,
-                    "super" => Token::Super,
-                    "this" => Token::This,
-                    "true" => Token::True,
-                    "var" => Token::Var,
-                    "while" => Token::While,
-                    "print" => Token::Print,
-                    ident => Token::Identifier(ident),
+                'a'..='z' | 'A'..='Z' | '_' => {
+                    let mut end = i;
+                    while self
+                        .chars
+                        .next_if(|(_, c)| matches!(c, 'a'..='z' | 'A'..='Z' | '_' | '0'..='9' ))
+                        .is_some()
+                    {
+                        end += 1;
+                    }
+                    let identifier = &self.file_content[i..=end];
+                    match identifier {
+                        "and" => Token::And,
+                        "class" => Token::Class,
+                        "else" => Token::Else,
+                        "false" => Token::False,
+                        "for" => Token::For,
+                        "fun" => Token::Fun,
+                        "if" => Token::If,
+                        "nil" => Token::Nil,
+                        "or" => Token::Or,
+                        "return" => Token::Return,
+                        "super" => Token::Super,
+                        "this" => Token::This,
+                        "true" => Token::True,
+                        "var" => Token::Var,
+                        "while" => Token::While,
+                        "print" => Token::Print,
+                        ident => Token::Identifier(ident),
+                    }
                 }
-            }
-            c => {
-                tokens.push(Err(LexingError {
-                    kind: LexingErrorKind::UnexpectedCharacter(c),
-                    line_count,
-                }));
-                continue;
-            }
-        };
-        tokens.push(Ok(token));
+                c => {
+                    return Some(Err(LexingError {
+                        kind: LexingErrorKind::UnexpectedCharacter(c),
+                        line_count: self.line_count,
+                    }));
+                }
+            };
+            return Some(Ok(token));
+        }
+        None
     }
-    tokens
 }
 
 #[derive(Debug, PartialEq)]
