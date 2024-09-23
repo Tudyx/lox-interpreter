@@ -1,5 +1,17 @@
 use std::fmt;
 
+// struct Lexer<'de> {
+//     file_content: &'de str,
+// }
+
+// impl<'de> Iterator for Lexer<'de> {
+//     type Item = Result<Token<'de>, ()>;
+
+//     fn next(&mut self) -> Option<Self::Item> {
+//         todo!()
+//     }
+// }
+
 pub fn tokenize(file_content: &str) -> Result<Vec<Token>, Vec<Token>> {
     let mut lexical_error = false;
     let mut line_count = 1;
