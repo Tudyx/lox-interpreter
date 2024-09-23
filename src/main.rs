@@ -123,6 +123,26 @@ fn parse_tokens<'de>(
                 let rhs = parse_tokens(tokens, bp);
                 lhs = TokenTree::Factor(Factor::Slash(Box::new(lhs), Box::new(rhs)));
             }
+            Token::Plus => {
+                let bp = 2;
+                if bp > min_bp {
+                    tokens.next();
+                } else {
+                    break;
+                }
+                let rhs = parse_tokens(tokens, bp);
+                lhs = TokenTree::Term(Term::Plus(Box::new(lhs), Box::new(rhs)));
+            }
+            Token::Minus => {
+                let bp = 2;
+                if bp > min_bp {
+                    tokens.next();
+                } else {
+                    break;
+                }
+                let rhs = parse_tokens(tokens, bp);
+                lhs = TokenTree::Term(Term::Minus(Box::new(lhs), Box::new(rhs)));
+            }
             _ => break,
         }
     }
@@ -137,6 +157,7 @@ enum TokenTree<'de> {
     Primary(Primary<'de>),
     Unary(Unary<'de>),
     Factor(Factor<'de>),
+    Term(Term<'de>),
 }
 
 impl fmt::Display for TokenTree<'_> {
@@ -145,6 +166,7 @@ impl fmt::Display for TokenTree<'_> {
             TokenTree::Primary(prim) => write!(f, "{prim}"),
             TokenTree::Unary(unary) => write!(f, "{unary}"),
             TokenTree::Factor(factor) => write!(f, "{factor}"),
+            TokenTree::Term(term) => write!(f, "{term}"),
         }
     }
 }
@@ -197,6 +219,21 @@ impl fmt::Display for Factor<'_> {
         match self {
             Factor::Slash(left, right) => write!(f, "(/ {left} {right})"),
             Factor::Star(left, right) => write!(f, "(* {left} {right})"),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+enum Term<'de> {
+    Minus(Box<TokenTree<'de>>, Box<TokenTree<'de>>),
+    Plus(Box<TokenTree<'de>>, Box<TokenTree<'de>>),
+}
+
+impl fmt::Display for Term<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Term::Minus(left, right) => write!(f, "(- {left} {right})"),
+            Term::Plus(left, right) => write!(f, "(+ {left} {right})"),
         }
     }
 }
