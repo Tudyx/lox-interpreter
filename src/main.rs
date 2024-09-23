@@ -100,7 +100,7 @@ fn parse_tokens<'de>(
     while let Some(next_token) = tokens.peek() {
         match dbg!(next_token) {
             Token::Star => {
-                let bp = 3;
+                let bp = 4;
                 if bp > min_bp {
                     tokens.next();
                 } else {
@@ -113,7 +113,7 @@ fn parse_tokens<'de>(
                 lhs = TokenTree::Factor(Factor::Star(Box::new(lhs), Box::new(rhs)));
             }
             Token::Slash => {
-                let bp = 3;
+                let bp = 4;
                 if bp > min_bp {
                     tokens.next();
                 } else {
@@ -124,7 +124,7 @@ fn parse_tokens<'de>(
                 lhs = TokenTree::Factor(Factor::Slash(Box::new(lhs), Box::new(rhs)));
             }
             Token::Plus => {
-                let bp = 2;
+                let bp = 3;
                 if bp > min_bp {
                     tokens.next();
                 } else {
@@ -134,7 +134,7 @@ fn parse_tokens<'de>(
                 lhs = TokenTree::Term(Term::Plus(Box::new(lhs), Box::new(rhs)));
             }
             Token::Minus => {
-                let bp = 2;
+                let bp = 3;
                 if bp > min_bp {
                     tokens.next();
                 } else {
@@ -144,7 +144,7 @@ fn parse_tokens<'de>(
                 lhs = TokenTree::Term(Term::Minus(Box::new(lhs), Box::new(rhs)));
             }
             Token::Less => {
-                let bp = 1;
+                let bp = 2;
                 if bp > min_bp {
                     tokens.next();
                 } else {
@@ -154,7 +154,7 @@ fn parse_tokens<'de>(
                 lhs = TokenTree::Comparison(Comparison::Less(Box::new(lhs), Box::new(rhs)));
             }
             Token::LessEqual => {
-                let bp = 1;
+                let bp = 2;
                 if bp > min_bp {
                     tokens.next();
                 } else {
@@ -164,8 +164,8 @@ fn parse_tokens<'de>(
                 lhs = TokenTree::Comparison(Comparison::LessEqual(Box::new(lhs), Box::new(rhs)));
             }
             Token::Greater => {
-                let bp = 1;
-                if dbg!(bp > min_bp) {
+                let bp = 2;
+                if bp > min_bp {
                     tokens.next();
                 } else {
                     break;
@@ -175,7 +175,7 @@ fn parse_tokens<'de>(
                 lhs = TokenTree::Comparison(Comparison::Greater(Box::new(lhs), Box::new(rhs)));
             }
             Token::GreaterEqual => {
-                let bp = 1;
+                let bp = 2;
                 if bp > min_bp {
                     tokens.next();
                 } else {
@@ -183,6 +183,27 @@ fn parse_tokens<'de>(
                 }
                 let rhs = parse_tokens(tokens, bp);
                 lhs = TokenTree::Comparison(Comparison::GreaterEqual(Box::new(lhs), Box::new(rhs)));
+            }
+
+            Token::EqualEqual => {
+                let bp = 1;
+                if bp > min_bp {
+                    tokens.next();
+                } else {
+                    break;
+                }
+                let rhs = parse_tokens(tokens, bp);
+                lhs = TokenTree::Equality(Equality::EqualEqual(Box::new(lhs), Box::new(rhs)));
+            }
+            Token::BangEqual => {
+                let bp = 1;
+                if bp > min_bp {
+                    tokens.next();
+                } else {
+                    break;
+                }
+                let rhs = parse_tokens(tokens, bp);
+                lhs = TokenTree::Equality(Equality::BangEqual(Box::new(lhs), Box::new(rhs)));
             }
             _ => {
                 eprintln!("Not operator found");
@@ -203,6 +224,7 @@ enum TokenTree<'de> {
     Factor(Factor<'de>),
     Term(Term<'de>),
     Comparison(Comparison<'de>),
+    Equality(Equality<'de>),
 }
 
 impl fmt::Display for TokenTree<'_> {
@@ -213,6 +235,7 @@ impl fmt::Display for TokenTree<'_> {
             TokenTree::Factor(factor) => write!(f, "{factor}"),
             TokenTree::Term(term) => write!(f, "{term}"),
             TokenTree::Comparison(comparison) => write!(f, "{comparison}"),
+            TokenTree::Equality(equality) => write!(f, "{equality}"),
         }
     }
 }
@@ -299,6 +322,21 @@ impl fmt::Display for Comparison<'_> {
             Comparison::LessEqual(left, right) => write!(f, "(<= {left} {right})"),
             Comparison::Greater(left, right) => write!(f, "(> {left} {right})"),
             Comparison::GreaterEqual(left, right) => write!(f, "(>= {left} {right})"),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+enum Equality<'de> {
+    EqualEqual(Box<TokenTree<'de>>, Box<TokenTree<'de>>),
+    BangEqual(Box<TokenTree<'de>>, Box<TokenTree<'de>>),
+}
+
+impl fmt::Display for Equality<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Equality::EqualEqual(left, right) => write!(f, "(== {left} {right})"),
+            Equality::BangEqual(left, right) => write!(f, "(!= {left} {right})"),
         }
     }
 }
