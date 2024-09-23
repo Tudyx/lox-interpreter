@@ -63,7 +63,7 @@ fn parse_tokens<'de>(
 ) -> TokenTree<'de> {
     let mut lhs = if let Some(token) = tokens.next() {
         // eprintln!("token {token}");
-        match token {
+        match dbg!(token) {
             Token::Nil => TokenTree::Primary(Primary::Nil),
             Token::True => TokenTree::Primary(Primary::True),
             Token::False => TokenTree::Primary(Primary::False),
@@ -93,12 +93,12 @@ fn parse_tokens<'de>(
     } else {
         TokenTree::Primary(Primary::Nil)
     };
+    dbg!(&lhs);
 
     // Here we don't passe the rest of the token to the recursive call,
     // so we must loop ourself
-    while let Some(token) = tokens.peek() {
-        eprintln!("peeked token {token}");
-        match token {
+    while let Some(next_token) = tokens.peek() {
+        match dbg!(next_token) {
             Token::Star => {
                 let bp = 3;
                 if bp > min_bp {
@@ -143,7 +143,51 @@ fn parse_tokens<'de>(
                 let rhs = parse_tokens(tokens, bp);
                 lhs = TokenTree::Term(Term::Minus(Box::new(lhs), Box::new(rhs)));
             }
-            _ => break,
+            Token::Less => {
+                let bp = 1;
+                if bp > min_bp {
+                    tokens.next();
+                } else {
+                    break;
+                }
+                let rhs = parse_tokens(tokens, bp);
+                lhs = TokenTree::Comparison(Comparison::Less(Box::new(lhs), Box::new(rhs)));
+            }
+            Token::LessEqual => {
+                let bp = 1;
+                if bp > min_bp {
+                    tokens.next();
+                } else {
+                    break;
+                }
+                let rhs = parse_tokens(tokens, bp);
+                lhs = TokenTree::Comparison(Comparison::LessEqual(Box::new(lhs), Box::new(rhs)));
+            }
+            Token::Greater => {
+                let bp = 1;
+                if dbg!(bp > min_bp) {
+                    tokens.next();
+                } else {
+                    break;
+                }
+
+                let rhs = parse_tokens(tokens, bp);
+                lhs = TokenTree::Comparison(Comparison::Greater(Box::new(lhs), Box::new(rhs)));
+            }
+            Token::GreaterEqual => {
+                let bp = 1;
+                if bp > min_bp {
+                    tokens.next();
+                } else {
+                    break;
+                }
+                let rhs = parse_tokens(tokens, bp);
+                lhs = TokenTree::Comparison(Comparison::GreaterEqual(Box::new(lhs), Box::new(rhs)));
+            }
+            _ => {
+                eprintln!("Not operator found");
+                break;
+            }
         }
     }
 
@@ -158,6 +202,7 @@ enum TokenTree<'de> {
     Unary(Unary<'de>),
     Factor(Factor<'de>),
     Term(Term<'de>),
+    Comparison(Comparison<'de>),
 }
 
 impl fmt::Display for TokenTree<'_> {
@@ -167,6 +212,7 @@ impl fmt::Display for TokenTree<'_> {
             TokenTree::Unary(unary) => write!(f, "{unary}"),
             TokenTree::Factor(factor) => write!(f, "{factor}"),
             TokenTree::Term(term) => write!(f, "{term}"),
+            TokenTree::Comparison(comparison) => write!(f, "{comparison}"),
         }
     }
 }
@@ -234,6 +280,25 @@ impl fmt::Display for Term<'_> {
         match self {
             Term::Minus(left, right) => write!(f, "(- {left} {right})"),
             Term::Plus(left, right) => write!(f, "(+ {left} {right})"),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+enum Comparison<'de> {
+    Less(Box<TokenTree<'de>>, Box<TokenTree<'de>>),
+    LessEqual(Box<TokenTree<'de>>, Box<TokenTree<'de>>),
+    Greater(Box<TokenTree<'de>>, Box<TokenTree<'de>>),
+    GreaterEqual(Box<TokenTree<'de>>, Box<TokenTree<'de>>),
+}
+
+impl fmt::Display for Comparison<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Comparison::Less(left, right) => write!(f, "(< {left} {right})"),
+            Comparison::LessEqual(left, right) => write!(f, "(<= {left} {right})"),
+            Comparison::Greater(left, right) => write!(f, "(> {left} {right})"),
+            Comparison::GreaterEqual(left, right) => write!(f, "(>= {left} {right})"),
         }
     }
 }
