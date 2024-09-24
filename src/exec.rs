@@ -1,11 +1,11 @@
-use std::fmt;
+use std::{borrow::Cow, fmt};
 
 use crate::parse::{Factor, Primary, Term, TokenTree, Unary};
 
 pub fn evaluate_expr(token_tree: TokenTree<'_>) -> Result<Ty<'_>, EvaluationError> {
     Ok(match token_tree {
         TokenTree::Primary(primary) => match primary {
-            Primary::String(string) => Ty::String(string),
+            Primary::String(string) => Ty::String(Cow::Borrowed(string)),
             Primary::Number(number) => Ty::Number(number),
             Primary::True => Ty::Boolean(true),
             Primary::False => Ty::Boolean(false),
@@ -47,11 +47,11 @@ pub fn evaluate_expr(token_tree: TokenTree<'_>) -> Result<Ty<'_>, EvaluationErro
                 let rhs = evaluate_expr(*rhs)?.as_number()?;
                 Ty::Number(lhs - rhs)
             }
-            Term::Plus(lhs, rhs) => {
-                let lhs = evaluate_expr(*lhs)?.as_number()?;
-                let rhs = evaluate_expr(*rhs)?.as_number()?;
-                Ty::Number(lhs + rhs)
-            }
+            Term::Plus(lhs, rhs) => match (evaluate_expr(*lhs)?, evaluate_expr(*rhs)?) {
+                (Ty::Number(lhs), Ty::Number(rhs)) => Ty::Number(lhs + rhs),
+                (Ty::String(lhs), Ty::String(rhs)) => Ty::String(lhs + rhs),
+                _ => return Err(EvaluationError::WrongType),
+            },
         },
         TokenTree::Comparison(_) => todo!(),
         TokenTree::Equality(_) => todo!(),
@@ -62,7 +62,7 @@ pub fn evaluate_expr(token_tree: TokenTree<'_>) -> Result<Ty<'_>, EvaluationErro
 pub enum Ty<'de> {
     Boolean(bool),
     Number(f64),
-    String(&'de str),
+    String(Cow<'de, str>),
     Nil,
 }
 
