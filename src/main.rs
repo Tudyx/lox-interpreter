@@ -1,10 +1,9 @@
+mod exec;
 mod lex;
 mod parse;
 
-use crate::lex::Lexer;
-use crate::parse::parse_tokens;
-use std::env;
-use std::fs;
+use crate::{exec::evaluate_expr, lex::Lexer, parse::parse_tokens};
+use std::{env, fs};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -50,6 +49,18 @@ fn main() {
                 std::process::exit(65);
             };
             println!("{token_tree}");
+        }
+        "evaluate" => {
+            let tokens = Lexer::new(&file_contents).map(|token| match token {
+                Ok(token) => token,
+                Err(_) => std::process::exit(65),
+            });
+            let tokens = &mut tokens.into_iter().peekable();
+            let Ok(token_tree) = parse_tokens(tokens, 0) else {
+                std::process::exit(65);
+            };
+            let value = evaluate_expr(token_tree);
+            println!("{value}");
         }
         _ => {
             eprintln!("Unknown command: {}", command);

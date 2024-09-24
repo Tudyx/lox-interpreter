@@ -7,7 +7,6 @@ pub fn parse_tokens<'de>(
     min_bp: u8,
 ) -> Result<TokenTree<'de>, ()> {
     let mut lhs = if let Some(token) = tokens.next() {
-        // eprintln!("token {token}");
         match dbg!(token) {
             Token::Nil => TokenTree::Primary(Primary::Nil),
             Token::True => TokenTree::Primary(Primary::True),
@@ -25,7 +24,7 @@ pub fn parse_tokens<'de>(
                 }
                 token_tree
             }
-            // prefix operator
+            // prefix operator (Unary)
             Token::Minus => TokenTree::Unary(Unary::Minus(Box::new(parse_tokens(tokens, 5)?))),
             Token::Bang => TokenTree::Unary(Unary::Bang(Box::new(parse_tokens(tokens, 5)?))),
             _ => return Err(()),
