@@ -52,7 +52,7 @@ impl<'de> Interpreter<'de> {
                 Primary::Identifier(ident) => self
                     .variables
                     .get(ident)
-                    .expect("variable should be defined")
+                    .ok_or_else(|| EvaluationError::UndefinedVariable(ident.to_string()))?
                     .clone(),
             },
             ExpressionTree::Unary(unary) => match unary {
@@ -68,7 +68,9 @@ impl<'de> Interpreter<'de> {
                     }
                 }
                 Unary::Minus(token_tree) => {
-                    let value = self.evaluate_expr(*token_tree)?.as_number()?;
+                    let value_tmp = self.evaluate_expr(*token_tree)?;
+                    let value = value_tmp.as_number()?;
+
                     Ty::Number(-value)
                 }
             },
@@ -178,15 +180,20 @@ impl fmt::Display for Ty<'_> {
 pub enum EvaluationError {
     ExpectedNumber,
     WrongPlusOperands,
+    UndefinedVariable(String),
 }
 
 impl fmt::Display for EvaluationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            EvaluationError::ExpectedNumber => write!(f, "Operand must be a number."),
+            EvaluationError::ExpectedNumber => {
+                let var_name = write!(f, "Operand must be a number.");
+                var_name
+            }
             EvaluationError::WrongPlusOperands => {
                 write!(f, "Operands must be two numbers or two strings.")
             }
+            EvaluationError::UndefinedVariable(ident) => write!(f, "Undefined variable '{ident}'."),
         }
     }
 }
