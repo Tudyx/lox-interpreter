@@ -49,7 +49,11 @@ impl<'de> Interpreter<'de> {
                 Primary::False => Ty::Boolean(false),
                 Primary::Nil => Ty::Nil,
                 Primary::Group(token_tree) => self.evaluate_expr(*token_tree)?,
-                Primary::Identifier(ident) => self.variables.get(ident).unwrap().clone(),
+                Primary::Identifier(ident) => self
+                    .variables
+                    .get(ident)
+                    .expect("variable should be defined")
+                    .clone(),
             },
             ExpressionTree::Unary(unary) => match unary {
                 Unary::Bang(token_tree) => {

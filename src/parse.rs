@@ -121,7 +121,6 @@ pub fn parse_expr<'de>(
                 } else {
                     break;
                 }
-                // let rhs = parse_tokens(&mut std::iter::once(tokens.next().unwrap()).peekable());
                 let rhs = parse_expr(tokens, bp)?;
                 lhs = ExpressionTree::Factor(Factor::Slash(Box::new(lhs), Box::new(rhs)));
             }
@@ -220,8 +219,6 @@ pub fn parse_expr<'de>(
     Ok(lhs)
 }
 // We only have left associativity (exept for prefix operator) so we can use only one binding power number
-
-// fn infix_binding_power() -> (u8, u8) {}
 
 #[derive(Debug, PartialEq)]
 pub enum ExpressionTree<'de> {

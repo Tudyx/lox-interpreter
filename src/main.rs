@@ -1,11 +1,12 @@
-mod exec;
+mod interpreter;
 mod lex;
 mod parse;
 
-use exec::Interpreter;
-use parse::parse_statements;
-
-use crate::{lex::Lexer, parse::parse_expr};
+use crate::{
+    interpreter::Interpreter,
+    lex::Lexer,
+    parse::{parse_expr, parse_statements},
+};
 use std::{env, fs};
 
 fn main() {
