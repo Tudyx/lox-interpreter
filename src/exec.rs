@@ -8,7 +8,11 @@ pub fn evaluate_statement(token_tree: StatementTree<'_>) -> Result<(), Evaluatio
             let value = evaluate_expr(expr)?;
             println!("{value}");
         }
-        StatementTree::Expr(_) => todo!(),
+        StatementTree::Expr(expr) => {
+            // expression statement is for expression
+            // that have side effects.
+            let _ = evaluate_expr(expr)?;
+        }
     };
     Ok(())
 }

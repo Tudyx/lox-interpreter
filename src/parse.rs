@@ -7,20 +7,27 @@ pub fn parse_statement<'de>(
 ) -> Result<Vec<StatementTree<'de>>, ()> {
     // A program is just 0 or more statements
     let mut statements = Vec::new();
-    while let Some(token) = tokens.next() {
+    while let Some(token) = tokens.peek() {
         match dbg!(token) {
             Token::Print => {
+                tokens.next();
                 let expr = parse_expr(tokens, 0)?;
-                if !tokens.next().is_some_and(|token| token == Token::Semicolon) {
-                    panic!("Missing semicolon")
+                if let Some(token) = tokens.next() {
+                    if token != Token::Semicolon {
+                        panic!("Expected semicolon got '{token}'");
+                    }
                 }
                 statements.push(StatementTree::Print(expr));
-                // eprintln!(
-                //     "Peak token after parsing the first statement {:?}",
-                //     tokens.peek()
-                // );
             }
-            _ => panic!("Invalide statement"),
+            _ => {
+                let expr = parse_expr(tokens, 0)?;
+                if let Some(token) = tokens.next() {
+                    if token != Token::Semicolon {
+                        panic!("Expected semicolon got '{token}'");
+                    }
+                }
+                statements.push(StatementTree::Expr(expr));
+            }
         }
     }
     Ok(statements)
