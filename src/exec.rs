@@ -1,6 +1,8 @@
 use std::{borrow::Cow, fmt};
 
-use crate::parse::{Comparison, Equality, Factor, Primary, StatementTree, Term, TokenTree, Unary};
+use crate::parse::{
+    Comparison, Equality, ExpressionTree, Factor, Primary, StatementTree, Term, Unary,
+};
 
 pub fn evaluate_statement(token_tree: StatementTree<'_>) -> Result<(), EvaluationError> {
     match token_tree {
@@ -17,9 +19,9 @@ pub fn evaluate_statement(token_tree: StatementTree<'_>) -> Result<(), Evaluatio
     Ok(())
 }
 
-pub fn evaluate_expr(token_tree: TokenTree<'_>) -> Result<Ty<'_>, EvaluationError> {
+pub fn evaluate_expr(token_tree: ExpressionTree<'_>) -> Result<Ty<'_>, EvaluationError> {
     Ok(match token_tree {
-        TokenTree::Primary(primary) => match primary {
+        ExpressionTree::Primary(primary) => match primary {
             Primary::String(string) => Ty::String(Cow::Borrowed(string)),
             Primary::Number(number) => Ty::Number(number),
             Primary::True => Ty::Boolean(true),
@@ -27,7 +29,7 @@ pub fn evaluate_expr(token_tree: TokenTree<'_>) -> Result<Ty<'_>, EvaluationErro
             Primary::Nil => Ty::Nil,
             Primary::Group(token_tree) => evaluate_expr(*token_tree)?,
         },
-        TokenTree::Unary(unary) => match unary {
+        ExpressionTree::Unary(unary) => match unary {
             Unary::Bang(token_tree) => {
                 let value = evaluate_expr(*token_tree)?;
                 match value {
@@ -44,7 +46,7 @@ pub fn evaluate_expr(token_tree: TokenTree<'_>) -> Result<Ty<'_>, EvaluationErro
                 Ty::Number(-value)
             }
         },
-        TokenTree::Factor(factor) => match factor {
+        ExpressionTree::Factor(factor) => match factor {
             Factor::Slash(lhs, rhs) => {
                 let lhs = evaluate_expr(*lhs)?.as_number()?;
                 let rhs = evaluate_expr(*rhs)?.as_number()?;
@@ -56,7 +58,7 @@ pub fn evaluate_expr(token_tree: TokenTree<'_>) -> Result<Ty<'_>, EvaluationErro
                 Ty::Number(lhs * rhs)
             }
         },
-        TokenTree::Term(term) => match term {
+        ExpressionTree::Term(term) => match term {
             Term::Minus(lhs, rhs) => {
                 let lhs = evaluate_expr(*lhs)?.as_number()?;
                 let rhs = evaluate_expr(*rhs)?.as_number()?;
@@ -68,7 +70,7 @@ pub fn evaluate_expr(token_tree: TokenTree<'_>) -> Result<Ty<'_>, EvaluationErro
                 _ => return Err(EvaluationError::WrongPlusOperands),
             },
         },
-        TokenTree::Comparison(comparison) => match comparison {
+        ExpressionTree::Comparison(comparison) => match comparison {
             Comparison::Less(lhs, rhs) => {
                 let lhs = evaluate_expr(*lhs)?.as_number()?;
                 let rhs = evaluate_expr(*rhs)?.as_number()?;
@@ -90,7 +92,7 @@ pub fn evaluate_expr(token_tree: TokenTree<'_>) -> Result<Ty<'_>, EvaluationErro
                 Ty::Boolean(lhs >= rhs)
             }
         },
-        TokenTree::Equality(equality) => match equality {
+        ExpressionTree::Equality(equality) => match equality {
             Equality::EqualEqual(lhs, rhs) => match (evaluate_expr(*lhs)?, evaluate_expr(*rhs)?) {
                 (Ty::Boolean(lhs), Ty::Boolean(rhs)) => Ty::Boolean(lhs == rhs),
                 (Ty::Number(lhs), Ty::Number(rhs)) => Ty::Boolean(lhs == rhs),

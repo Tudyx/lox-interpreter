@@ -8,7 +8,7 @@ pub fn parse_statement<'de>(
     // A program is just 0 or more statements
     let mut statements = Vec::new();
     while let Some(token) = tokens.peek() {
-        match dbg!(token) {
+        match token {
             Token::Print => {
                 tokens.next();
                 let expr = parse_expr(tokens, 0)?;
@@ -19,6 +19,7 @@ pub fn parse_statement<'de>(
                 }
                 statements.push(StatementTree::Print(expr));
             }
+            Token::Var => {}
             _ => {
                 let expr = parse_expr(tokens, 0)?;
                 if let Some(token) = tokens.next() {
@@ -34,23 +35,26 @@ pub fn parse_statement<'de>(
 }
 
 pub enum StatementTree<'de> {
-    Print(TokenTree<'de>),
-    Expr(TokenTree<'de>),
+    /// Print statement
+    Print(ExpressionTree<'de>),
+    /// Expression statement
+    Expr(ExpressionTree<'de>),
 }
+
 pub fn parse_expr<'de>(
     tokens: &mut Peekable<impl Iterator<Item = Token<'de>>>,
     min_bp: u8,
-) -> Result<TokenTree<'de>, ()> {
+) -> Result<ExpressionTree<'de>, ()> {
     let mut lhs = if let Some(token) = tokens.next() {
         match token {
-            Token::Nil => TokenTree::Primary(Primary::Nil),
-            Token::True => TokenTree::Primary(Primary::True),
-            Token::False => TokenTree::Primary(Primary::False),
-            Token::Number(n, _) => TokenTree::Primary(Primary::Number(n)),
-            Token::String(s) => TokenTree::Primary(Primary::String(s)),
+            Token::Nil => ExpressionTree::Primary(Primary::Nil),
+            Token::True => ExpressionTree::Primary(Primary::True),
+            Token::False => ExpressionTree::Primary(Primary::False),
+            Token::Number(n, _) => ExpressionTree::Primary(Primary::Number(n)),
+            Token::String(s) => ExpressionTree::Primary(Primary::String(s)),
             Token::LeftParen => {
                 let token_tree =
-                    TokenTree::Primary(Primary::Group(Box::new(parse_expr(tokens, 0)?)));
+                    ExpressionTree::Primary(Primary::Group(Box::new(parse_expr(tokens, 0)?)));
                 if !tokens
                     .next()
                     .is_some_and(|token| token == Token::RightParen)
@@ -60,12 +64,12 @@ pub fn parse_expr<'de>(
                 token_tree
             }
             // prefix operator (Unary)
-            Token::Minus => TokenTree::Unary(Unary::Minus(Box::new(parse_expr(tokens, 5)?))),
-            Token::Bang => TokenTree::Unary(Unary::Bang(Box::new(parse_expr(tokens, 5)?))),
+            Token::Minus => ExpressionTree::Unary(Unary::Minus(Box::new(parse_expr(tokens, 5)?))),
+            Token::Bang => ExpressionTree::Unary(Unary::Bang(Box::new(parse_expr(tokens, 5)?))),
             _ => return Err(()),
         }
     } else {
-        TokenTree::Primary(Primary::Nil)
+        ExpressionTree::Primary(Primary::Nil)
     };
 
     // Here we don't passe the rest of the token to the recursive call,
@@ -83,7 +87,7 @@ pub fn parse_expr<'de>(
                 // precedence that the Star. If it's lower, for instance a +, we stop
                 // let rhs = parse_tokens(&mut std::iter::once(tokens.next().unwrap()).peekable());
                 let rhs = parse_expr(tokens, bp)?;
-                lhs = TokenTree::Factor(Factor::Star(Box::new(lhs), Box::new(rhs)));
+                lhs = ExpressionTree::Factor(Factor::Star(Box::new(lhs), Box::new(rhs)));
             }
             Token::Slash => {
                 let bp = 4;
@@ -94,7 +98,7 @@ pub fn parse_expr<'de>(
                 }
                 // let rhs = parse_tokens(&mut std::iter::once(tokens.next().unwrap()).peekable());
                 let rhs = parse_expr(tokens, bp)?;
-                lhs = TokenTree::Factor(Factor::Slash(Box::new(lhs), Box::new(rhs)));
+                lhs = ExpressionTree::Factor(Factor::Slash(Box::new(lhs), Box::new(rhs)));
             }
             Token::Plus => {
                 let bp = 3;
@@ -104,7 +108,7 @@ pub fn parse_expr<'de>(
                     break;
                 }
                 let rhs = parse_expr(tokens, bp)?;
-                lhs = TokenTree::Term(Term::Plus(Box::new(lhs), Box::new(rhs)));
+                lhs = ExpressionTree::Term(Term::Plus(Box::new(lhs), Box::new(rhs)));
             }
             Token::Minus => {
                 let bp = 3;
@@ -114,7 +118,7 @@ pub fn parse_expr<'de>(
                     break;
                 }
                 let rhs = parse_expr(tokens, bp)?;
-                lhs = TokenTree::Term(Term::Minus(Box::new(lhs), Box::new(rhs)));
+                lhs = ExpressionTree::Term(Term::Minus(Box::new(lhs), Box::new(rhs)));
             }
             Token::Less => {
                 let bp = 2;
@@ -124,7 +128,7 @@ pub fn parse_expr<'de>(
                     break;
                 }
                 let rhs = parse_expr(tokens, bp)?;
-                lhs = TokenTree::Comparison(Comparison::Less(Box::new(lhs), Box::new(rhs)));
+                lhs = ExpressionTree::Comparison(Comparison::Less(Box::new(lhs), Box::new(rhs)));
             }
             Token::LessEqual => {
                 let bp = 2;
@@ -134,7 +138,8 @@ pub fn parse_expr<'de>(
                     break;
                 }
                 let rhs = parse_expr(tokens, bp)?;
-                lhs = TokenTree::Comparison(Comparison::LessEqual(Box::new(lhs), Box::new(rhs)));
+                lhs =
+                    ExpressionTree::Comparison(Comparison::LessEqual(Box::new(lhs), Box::new(rhs)));
             }
             Token::Greater => {
                 let bp = 2;
@@ -145,7 +150,7 @@ pub fn parse_expr<'de>(
                 }
 
                 let rhs = parse_expr(tokens, bp)?;
-                lhs = TokenTree::Comparison(Comparison::Greater(Box::new(lhs), Box::new(rhs)));
+                lhs = ExpressionTree::Comparison(Comparison::Greater(Box::new(lhs), Box::new(rhs)));
             }
             Token::GreaterEqual => {
                 let bp = 2;
@@ -155,7 +160,10 @@ pub fn parse_expr<'de>(
                     break;
                 }
                 let rhs = parse_expr(tokens, bp)?;
-                lhs = TokenTree::Comparison(Comparison::GreaterEqual(Box::new(lhs), Box::new(rhs)));
+                lhs = ExpressionTree::Comparison(Comparison::GreaterEqual(
+                    Box::new(lhs),
+                    Box::new(rhs),
+                ));
             }
 
             Token::EqualEqual => {
@@ -166,7 +174,7 @@ pub fn parse_expr<'de>(
                     break;
                 }
                 let rhs = parse_expr(tokens, bp)?;
-                lhs = TokenTree::Equality(Equality::EqualEqual(Box::new(lhs), Box::new(rhs)));
+                lhs = ExpressionTree::Equality(Equality::EqualEqual(Box::new(lhs), Box::new(rhs)));
             }
             Token::BangEqual => {
                 let bp = 1;
@@ -176,7 +184,7 @@ pub fn parse_expr<'de>(
                     break;
                 }
                 let rhs = parse_expr(tokens, bp)?;
-                lhs = TokenTree::Equality(Equality::BangEqual(Box::new(lhs), Box::new(rhs)));
+                lhs = ExpressionTree::Equality(Equality::BangEqual(Box::new(lhs), Box::new(rhs)));
             }
             _ => {
                 break;
@@ -191,7 +199,7 @@ pub fn parse_expr<'de>(
 // fn infix_binding_power() -> (u8, u8) {}
 
 #[derive(Debug, PartialEq)]
-pub enum TokenTree<'de> {
+pub enum ExpressionTree<'de> {
     Primary(Primary<'de>),
     Unary(Unary<'de>),
     Factor(Factor<'de>),
@@ -200,15 +208,15 @@ pub enum TokenTree<'de> {
     Equality(Equality<'de>),
 }
 
-impl fmt::Display for TokenTree<'_> {
+impl fmt::Display for ExpressionTree<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TokenTree::Primary(prim) => write!(f, "{prim}"),
-            TokenTree::Unary(unary) => write!(f, "{unary}"),
-            TokenTree::Factor(factor) => write!(f, "{factor}"),
-            TokenTree::Term(term) => write!(f, "{term}"),
-            TokenTree::Comparison(comparison) => write!(f, "{comparison}"),
-            TokenTree::Equality(equality) => write!(f, "{equality}"),
+            ExpressionTree::Primary(prim) => write!(f, "{prim}"),
+            ExpressionTree::Unary(unary) => write!(f, "{unary}"),
+            ExpressionTree::Factor(factor) => write!(f, "{factor}"),
+            ExpressionTree::Term(term) => write!(f, "{term}"),
+            ExpressionTree::Comparison(comparison) => write!(f, "{comparison}"),
+            ExpressionTree::Equality(equality) => write!(f, "{equality}"),
         }
     }
 }
@@ -220,7 +228,7 @@ pub enum Primary<'de> {
     True,
     False,
     Nil,
-    Group(Box<TokenTree<'de>>),
+    Group(Box<ExpressionTree<'de>>),
 }
 
 impl fmt::Display for Primary<'_> {
@@ -237,8 +245,8 @@ impl fmt::Display for Primary<'_> {
 }
 #[derive(Debug, PartialEq)]
 pub enum Unary<'de> {
-    Bang(Box<TokenTree<'de>>),
-    Minus(Box<TokenTree<'de>>),
+    Bang(Box<ExpressionTree<'de>>),
+    Minus(Box<ExpressionTree<'de>>),
 }
 
 impl fmt::Display for Unary<'_> {
@@ -252,8 +260,8 @@ impl fmt::Display for Unary<'_> {
 
 #[derive(Debug, PartialEq)]
 pub enum Factor<'de> {
-    Slash(Box<TokenTree<'de>>, Box<TokenTree<'de>>),
-    Star(Box<TokenTree<'de>>, Box<TokenTree<'de>>),
+    Slash(Box<ExpressionTree<'de>>, Box<ExpressionTree<'de>>),
+    Star(Box<ExpressionTree<'de>>, Box<ExpressionTree<'de>>),
 }
 
 impl fmt::Display for Factor<'_> {
@@ -267,8 +275,8 @@ impl fmt::Display for Factor<'_> {
 
 #[derive(Debug, PartialEq)]
 pub enum Term<'de> {
-    Minus(Box<TokenTree<'de>>, Box<TokenTree<'de>>),
-    Plus(Box<TokenTree<'de>>, Box<TokenTree<'de>>),
+    Minus(Box<ExpressionTree<'de>>, Box<ExpressionTree<'de>>),
+    Plus(Box<ExpressionTree<'de>>, Box<ExpressionTree<'de>>),
 }
 
 impl fmt::Display for Term<'_> {
@@ -282,10 +290,10 @@ impl fmt::Display for Term<'_> {
 
 #[derive(Debug, PartialEq)]
 pub enum Comparison<'de> {
-    Less(Box<TokenTree<'de>>, Box<TokenTree<'de>>),
-    LessEqual(Box<TokenTree<'de>>, Box<TokenTree<'de>>),
-    Greater(Box<TokenTree<'de>>, Box<TokenTree<'de>>),
-    GreaterEqual(Box<TokenTree<'de>>, Box<TokenTree<'de>>),
+    Less(Box<ExpressionTree<'de>>, Box<ExpressionTree<'de>>),
+    LessEqual(Box<ExpressionTree<'de>>, Box<ExpressionTree<'de>>),
+    Greater(Box<ExpressionTree<'de>>, Box<ExpressionTree<'de>>),
+    GreaterEqual(Box<ExpressionTree<'de>>, Box<ExpressionTree<'de>>),
 }
 
 impl fmt::Display for Comparison<'_> {
@@ -301,8 +309,8 @@ impl fmt::Display for Comparison<'_> {
 
 #[derive(Debug, PartialEq)]
 pub enum Equality<'de> {
-    EqualEqual(Box<TokenTree<'de>>, Box<TokenTree<'de>>),
-    BangEqual(Box<TokenTree<'de>>, Box<TokenTree<'de>>),
+    EqualEqual(Box<ExpressionTree<'de>>, Box<ExpressionTree<'de>>),
+    BangEqual(Box<ExpressionTree<'de>>, Box<ExpressionTree<'de>>),
 }
 
 impl fmt::Display for Equality<'_> {
