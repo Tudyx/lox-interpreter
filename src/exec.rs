@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::parse::{Factor, Primary, TokenTree, Unary};
+use crate::parse::{Factor, Primary, Term, TokenTree, Unary};
 
 pub fn evaluate_expr(token_tree: TokenTree<'_>) -> Result<Ty<'_>, EvaluationError> {
     Ok(match token_tree {
@@ -41,7 +41,18 @@ pub fn evaluate_expr(token_tree: TokenTree<'_>) -> Result<Ty<'_>, EvaluationErro
                 Ty::Number(lhs * rhs)
             }
         },
-        TokenTree::Term(_) => todo!(),
+        TokenTree::Term(term) => match term {
+            Term::Minus(lhs, rhs) => {
+                let lhs = evaluate_expr(*lhs)?.as_number()?;
+                let rhs = evaluate_expr(*rhs)?.as_number()?;
+                Ty::Number(lhs - rhs)
+            }
+            Term::Plus(lhs, rhs) => {
+                let lhs = evaluate_expr(*lhs)?.as_number()?;
+                let rhs = evaluate_expr(*rhs)?.as_number()?;
+                Ty::Number(lhs + rhs)
+            }
+        },
         TokenTree::Comparison(_) => todo!(),
         TokenTree::Equality(_) => todo!(),
     })
