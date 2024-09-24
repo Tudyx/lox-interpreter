@@ -4,20 +4,26 @@ use crate::lex::Token;
 
 pub fn parse_statement<'de>(
     tokens: &mut Peekable<impl Iterator<Item = Token<'de>>>,
-) -> Result<StatementTree<'de>, ()> {
-    if let Some(token) = tokens.next() {
-        match token {
+) -> Result<Vec<StatementTree<'de>>, ()> {
+    // A program is just 0 or more statements
+    let mut statements = Vec::new();
+    while let Some(token) = tokens.next() {
+        match dbg!(token) {
             Token::Print => {
                 let expr = parse_expr(tokens, 0)?;
                 if !tokens.next().is_some_and(|token| token == Token::Semicolon) {
                     panic!("Missing semicolon")
                 }
-                return Ok(StatementTree::Print(expr));
+                statements.push(StatementTree::Print(expr));
+                // eprintln!(
+                //     "Peak token after parsing the first statement {:?}",
+                //     tokens.peek()
+                // );
             }
             _ => panic!("Invalide statement"),
         }
     }
-    unimplemented!()
+    Ok(statements)
 }
 
 pub enum StatementTree<'de> {

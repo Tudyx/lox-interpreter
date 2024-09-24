@@ -80,9 +80,13 @@ fn main() {
             let Ok(token_tree) = parse_statement(tokens) else {
                 std::process::exit(65);
             };
-            if let Err(err) = evaluate_statement(token_tree) {
-                eprintln!("{err}");
-                std::process::exit(70);
+            eprintln!("Find {} statement", token_tree.len());
+
+            for statement in token_tree {
+                if let Err(err) = evaluate_statement(statement) {
+                    eprintln!("{err}");
+                    std::process::exit(70);
+                }
             }
         }
         _ => {

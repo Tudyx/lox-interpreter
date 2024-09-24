@@ -1,12 +1,8 @@
-use std::{
-    fmt,
-    iter::{Enumerate, Peekable},
-    str::Chars,
-};
+use std::{fmt, iter::Peekable, str::CharIndices};
 
 pub struct Lexer<'de> {
     file_content: &'de str,
-    chars: Peekable<Enumerate<Chars<'de>>>,
+    chars: Peekable<CharIndices<'de>>,
     line_count: usize,
 }
 
@@ -14,7 +10,7 @@ impl<'de> Lexer<'de> {
     pub fn new(file_content: &'de str) -> Self {
         Self {
             file_content,
-            chars: file_content.chars().enumerate().peekable(),
+            chars: file_content.char_indices().peekable(),
             line_count: 1,
         }
     }
@@ -79,8 +75,8 @@ impl<'de> Iterator for Lexer<'de> {
                     self.line_count += 1;
                     continue;
                 }
-                '"' => match self.chars.position(|(_, c)| c == '"') {
-                    Some(end) => Token::String(&self.file_content[i + 1..=i + end]),
+                '"' => match self.chars.find(|(_, c)| c == &'"') {
+                    Some((end, _)) => Token::String(&self.file_content[i + 1..end]),
                     None => {
                         return Some(Err(LexingError {
                             kind: LexingErrorKind::UnterminatedString,
