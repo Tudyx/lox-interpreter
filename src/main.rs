@@ -59,8 +59,13 @@ fn main() {
             let Ok(token_tree) = parse_tokens(tokens, 0) else {
                 std::process::exit(65);
             };
-            let value = evaluate_expr(token_tree);
-            println!("{value}");
+            match evaluate_expr(token_tree) {
+                Ok(value) => println!("{value}"),
+                Err(err) => {
+                    eprintln!("{err}");
+                    std::process::exit(65);
+                }
+            };
         }
         _ => {
             eprintln!("Unknown command: {}", command);
