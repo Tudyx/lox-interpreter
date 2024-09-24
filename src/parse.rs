@@ -2,9 +2,9 @@ use std::{fmt, iter::Peekable};
 
 use crate::lex::Token;
 
-pub fn parse_statement<'de>(
-    tokens: &mut Peekable<impl Iterator<Item = Token<'de>>>,
-) -> Result<Vec<StatementTree<'de>>, ()> {
+pub fn parse_statements<'de>(
+    tokens: &'de mut Peekable<impl Iterator<Item = Token<'de>>>,
+) -> Result<Vec<StatementTree<'de>>, ParseExpressionError> {
     // A program is just 0 or more statements
     let mut statements = Vec::new();
     while let Some(token) = tokens.peek() {
@@ -19,7 +19,24 @@ pub fn parse_statement<'de>(
                 }
                 statements.push(StatementTree::Print(expr));
             }
-            Token::Var => {}
+            Token::Var => {
+                tokens.next();
+                let Some(Token::Identifier(ident)) = tokens.next() else {
+                    panic!("Expected identifier");
+                };
+                let expr = if tokens.next_if_eq(&Token::Equal).is_some() {
+                    Some(parse_expr(tokens, 0)?)
+                } else {
+                    None
+                };
+
+                if let Some(token) = tokens.next() {
+                    if token != Token::Semicolon {
+                        panic!("Expected semicolon got '{token}'");
+                    }
+                }
+                statements.push(StatementTree::VarDeclaration { ident, expr })
+            }
             _ => {
                 let expr = parse_expr(tokens, 0)?;
                 if let Some(token) = tokens.next() {
@@ -39,12 +56,19 @@ pub enum StatementTree<'de> {
     Print(ExpressionTree<'de>),
     /// Expression statement
     Expr(ExpressionTree<'de>),
+
+    // TODO: This should be a separate type
+    // because this a special statement
+    VarDeclaration {
+        ident: &'de str,
+        expr: Option<ExpressionTree<'de>>,
+    },
 }
 
 pub fn parse_expr<'de>(
     tokens: &mut Peekable<impl Iterator<Item = Token<'de>>>,
     min_bp: u8,
-) -> Result<ExpressionTree<'de>, ()> {
+) -> Result<ExpressionTree<'de>, ParseExpressionError<'de>> {
     let mut lhs = if let Some(token) = tokens.next() {
         match token {
             Token::Nil => ExpressionTree::Primary(Primary::Nil),
@@ -59,14 +83,15 @@ pub fn parse_expr<'de>(
                     .next()
                     .is_some_and(|token| token == Token::RightParen)
                 {
-                    panic!("Miss Right Paren");
+                    return Err(ParseExpressionError::MissingRightParen);
                 }
                 token_tree
             }
+            Token::Identifier(ident) => ExpressionTree::Primary(Primary::Identifier(ident)),
             // prefix operator (Unary)
             Token::Minus => ExpressionTree::Unary(Unary::Minus(Box::new(parse_expr(tokens, 5)?))),
             Token::Bang => ExpressionTree::Unary(Unary::Bang(Box::new(parse_expr(tokens, 5)?))),
-            _ => return Err(()),
+            token => return Err(ParseExpressionError::InvalidToken(token)),
         }
     } else {
         ExpressionTree::Primary(Primary::Nil)
@@ -229,6 +254,8 @@ pub enum Primary<'de> {
     False,
     Nil,
     Group(Box<ExpressionTree<'de>>),
+    // A variable name
+    Identifier(&'de str),
 }
 
 impl fmt::Display for Primary<'_> {
@@ -240,6 +267,7 @@ impl fmt::Display for Primary<'_> {
             Primary::False => write!(f, "false"),
             Primary::Nil => write!(f, "nil"),
             Primary::Group(tt) => write!(f, "(group {tt})"),
+            Primary::Identifier(_) => todo!(),
         }
     }
 }
@@ -318,6 +346,21 @@ impl fmt::Display for Equality<'_> {
         match self {
             Equality::EqualEqual(left, right) => write!(f, "(== {left} {right})"),
             Equality::BangEqual(left, right) => write!(f, "(!= {left} {right})"),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum ParseExpressionError<'de> {
+    InvalidToken(Token<'de>),
+    MissingRightParen,
+}
+
+impl fmt::Display for ParseExpressionError<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ParseExpressionError::InvalidToken(token) => write!(f, "invalid token: {token}"),
+            ParseExpressionError::MissingRightParen => write!(f, "missing right paren"),
         }
     }
 }

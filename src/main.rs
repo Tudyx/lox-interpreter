@@ -2,10 +2,10 @@ mod exec;
 mod lex;
 mod parse;
 
-use exec::evaluate_statement;
-use parse::parse_statement;
+use exec::Interpreter;
+use parse::parse_statements;
 
-use crate::{exec::evaluate_expr, lex::Lexer, parse::parse_expr};
+use crate::{lex::Lexer, parse::parse_expr};
 use std::{env, fs};
 
 fn main() {
@@ -45,7 +45,10 @@ fn main() {
         "parse" => {
             let tokens = Lexer::new(&file_contents).map(|token| match token {
                 Ok(token) => token,
-                Err(_) => std::process::exit(65),
+                Err(err) => {
+                    eprintln!("{err}");
+                    std::process::exit(65)
+                }
             });
             let tokens = &mut tokens.into_iter().peekable();
             let Ok(token_tree) = parse_expr(tokens, 0) else {
@@ -56,14 +59,20 @@ fn main() {
         "evaluate" => {
             let tokens = Lexer::new(&file_contents).map(|token| match token {
                 Ok(token) => token,
-                Err(_) => std::process::exit(65),
+                Err(err) => {
+                    eprintln!("{err}");
+                    std::process::exit(65)
+                }
             });
             let tokens = &mut tokens.into_iter().peekable();
 
             let Ok(token_tree) = parse_expr(tokens, 0) else {
                 std::process::exit(65);
             };
-            match evaluate_expr(token_tree) {
+
+            let interpreter = Interpreter::new();
+
+            match interpreter.evaluate_expr(token_tree) {
                 Ok(value) => println!("{value}"),
                 Err(err) => {
                     eprintln!("{err}");
@@ -74,19 +83,24 @@ fn main() {
         "run" => {
             let tokens = Lexer::new(&file_contents).map(|token| match token {
                 Ok(token) => token,
-                Err(_) => std::process::exit(65),
+                Err(err) => {
+                    eprintln!("{err}");
+                    std::process::exit(65)
+                }
             });
             let tokens = &mut tokens.into_iter().peekable();
-            let Ok(token_tree) = parse_statement(tokens) else {
-                std::process::exit(65);
+            let token_tree = match parse_statements(tokens) {
+                Ok(token_tree) => token_tree,
+                Err(err) => {
+                    eprintln!("Failed to parse the statements: {err}");
+                    std::process::exit(65)
+                }
             };
             eprintln!("Find {} statement", token_tree.len());
-
-            for statement in token_tree {
-                if let Err(err) = evaluate_statement(statement) {
-                    eprintln!("{err}");
-                    std::process::exit(70);
-                }
+            let mut interpreter = Interpreter::new();
+            if let Err(err) = interpreter.evaluate(token_tree) {
+                eprintln!("{err}");
+                std::process::exit(70);
             }
         }
         _ => {

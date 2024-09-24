@@ -1,117 +1,147 @@
-use std::{borrow::Cow, fmt};
+use std::{borrow::Cow, collections::HashMap, fmt};
 
 use crate::parse::{
     Comparison, Equality, ExpressionTree, Factor, Primary, StatementTree, Term, Unary,
 };
 
-pub fn evaluate_statement(token_tree: StatementTree<'_>) -> Result<(), EvaluationError> {
-    match token_tree {
-        StatementTree::Print(expr) => {
-            let value = evaluate_expr(expr)?;
-            println!("{value}");
-        }
-        StatementTree::Expr(expr) => {
-            // expression statement is for expression
-            // that have side effects.
-            let _ = evaluate_expr(expr)?;
-        }
-    };
-    Ok(())
+pub struct Interpreter<'de> {
+    variables: HashMap<&'de str, Ty<'de>>,
 }
 
-pub fn evaluate_expr(token_tree: ExpressionTree<'_>) -> Result<Ty<'_>, EvaluationError> {
-    Ok(match token_tree {
-        ExpressionTree::Primary(primary) => match primary {
-            Primary::String(string) => Ty::String(Cow::Borrowed(string)),
-            Primary::Number(number) => Ty::Number(number),
-            Primary::True => Ty::Boolean(true),
-            Primary::False => Ty::Boolean(false),
-            Primary::Nil => Ty::Nil,
-            Primary::Group(token_tree) => evaluate_expr(*token_tree)?,
-        },
-        ExpressionTree::Unary(unary) => match unary {
-            Unary::Bang(token_tree) => {
-                let value = evaluate_expr(*token_tree)?;
-                match value {
-                    Ty::Boolean(boolean) => match boolean {
-                        true => Ty::Boolean(false),
-                        false => Ty::Boolean(true),
-                    },
-                    Ty::Number(_) | Ty::String(_) => Ty::Boolean(false),
-                    Ty::Nil => Ty::Boolean(true),
+impl<'de> Interpreter<'de> {
+    pub fn new() -> Self {
+        Self {
+            variables: HashMap::new(),
+        }
+    }
+    pub fn evaluate(&mut self, token_tree: Vec<StatementTree<'de>>) -> Result<(), EvaluationError> {
+        for statement in token_tree {
+            match statement {
+                StatementTree::Print(expr) => {
+                    let value = self.evaluate_expr(expr)?;
+                    println!("{value}");
                 }
-            }
-            Unary::Minus(token_tree) => {
-                let value = evaluate_expr(*token_tree)?.as_number()?;
-                Ty::Number(-value)
-            }
-        },
-        ExpressionTree::Factor(factor) => match factor {
-            Factor::Slash(lhs, rhs) => {
-                let lhs = evaluate_expr(*lhs)?.as_number()?;
-                let rhs = evaluate_expr(*rhs)?.as_number()?;
-                Ty::Number(lhs / rhs)
-            }
-            Factor::Star(lhs, rhs) => {
-                let lhs = evaluate_expr(*lhs)?.as_number()?;
-                let rhs = evaluate_expr(*rhs)?.as_number()?;
-                Ty::Number(lhs * rhs)
-            }
-        },
-        ExpressionTree::Term(term) => match term {
-            Term::Minus(lhs, rhs) => {
-                let lhs = evaluate_expr(*lhs)?.as_number()?;
-                let rhs = evaluate_expr(*rhs)?.as_number()?;
-                Ty::Number(lhs - rhs)
-            }
-            Term::Plus(lhs, rhs) => match (evaluate_expr(*lhs)?, evaluate_expr(*rhs)?) {
-                (Ty::Number(lhs), Ty::Number(rhs)) => Ty::Number(lhs + rhs),
-                (Ty::String(lhs), Ty::String(rhs)) => Ty::String(lhs + rhs),
-                _ => return Err(EvaluationError::WrongPlusOperands),
+                StatementTree::Expr(expr) => {
+                    // Expression statement is for expression
+                    // that have side effects.
+                    let _ = self.evaluate_expr(expr)?;
+                }
+                StatementTree::VarDeclaration { ident, expr } => {
+                    if let Some(expr) = expr {
+                        let value = self.evaluate_expr(expr)?;
+                        self.variables.insert(ident, value);
+                    }
+                }
+            };
+        }
+        Ok(())
+    }
+
+    pub fn evaluate_expr(
+        &self,
+        token_tree: ExpressionTree<'de>,
+    ) -> Result<Ty<'de>, EvaluationError> {
+        Ok(match token_tree {
+            ExpressionTree::Primary(primary) => match primary {
+                Primary::String(string) => Ty::String(Cow::Borrowed(string)),
+                Primary::Number(number) => Ty::Number(number),
+                Primary::True => Ty::Boolean(true),
+                Primary::False => Ty::Boolean(false),
+                Primary::Nil => Ty::Nil,
+                Primary::Group(token_tree) => self.evaluate_expr(*token_tree)?,
+                Primary::Identifier(ident) => self.variables.get(ident).unwrap().clone(),
             },
-        },
-        ExpressionTree::Comparison(comparison) => match comparison {
-            Comparison::Less(lhs, rhs) => {
-                let lhs = evaluate_expr(*lhs)?.as_number()?;
-                let rhs = evaluate_expr(*rhs)?.as_number()?;
-                Ty::Boolean(lhs < rhs)
-            }
-            Comparison::LessEqual(lhs, rhs) => {
-                let lhs = evaluate_expr(*lhs)?.as_number()?;
-                let rhs = evaluate_expr(*rhs)?.as_number()?;
-                Ty::Boolean(lhs <= rhs)
-            }
-            Comparison::Greater(lhs, rhs) => {
-                let lhs = evaluate_expr(*lhs)?.as_number()?;
-                let rhs = evaluate_expr(*rhs)?.as_number()?;
-                Ty::Boolean(lhs > rhs)
-            }
-            Comparison::GreaterEqual(lhs, rhs) => {
-                let lhs = evaluate_expr(*lhs)?.as_number()?;
-                let rhs = evaluate_expr(*rhs)?.as_number()?;
-                Ty::Boolean(lhs >= rhs)
-            }
-        },
-        ExpressionTree::Equality(equality) => match equality {
-            Equality::EqualEqual(lhs, rhs) => match (evaluate_expr(*lhs)?, evaluate_expr(*rhs)?) {
-                (Ty::Boolean(lhs), Ty::Boolean(rhs)) => Ty::Boolean(lhs == rhs),
-                (Ty::Number(lhs), Ty::Number(rhs)) => Ty::Boolean(lhs == rhs),
-                (Ty::String(lhs), Ty::String(rhs)) => Ty::Boolean(lhs == rhs),
-                (Ty::Nil, Ty::Nil) => Ty::Boolean(true),
-                _ => Ty::Boolean(false),
+            ExpressionTree::Unary(unary) => match unary {
+                Unary::Bang(token_tree) => {
+                    let value = self.evaluate_expr(*token_tree)?;
+                    match value {
+                        Ty::Boolean(boolean) => match boolean {
+                            true => Ty::Boolean(false),
+                            false => Ty::Boolean(true),
+                        },
+                        Ty::Number(_) | Ty::String(_) => Ty::Boolean(false),
+                        Ty::Nil => Ty::Boolean(true),
+                    }
+                }
+                Unary::Minus(token_tree) => {
+                    let value = self.evaluate_expr(*token_tree)?.as_number()?;
+                    Ty::Number(-value)
+                }
             },
-            Equality::BangEqual(lhs, rhs) => match (evaluate_expr(*lhs)?, evaluate_expr(*rhs)?) {
-                (Ty::Boolean(lhs), Ty::Boolean(rhs)) => Ty::Boolean(lhs != rhs),
-                (Ty::Number(lhs), Ty::Number(rhs)) => Ty::Boolean(lhs != rhs),
-                (Ty::String(lhs), Ty::String(rhs)) => Ty::Boolean(lhs != rhs),
-                (Ty::Nil, Ty::Nil) => Ty::Boolean(true),
-                _ => Ty::Boolean(false),
+            ExpressionTree::Factor(factor) => match factor {
+                Factor::Slash(lhs, rhs) => {
+                    let lhs = self.evaluate_expr(*lhs)?.as_number()?;
+                    let rhs = self.evaluate_expr(*rhs)?.as_number()?;
+                    Ty::Number(lhs / rhs)
+                }
+                Factor::Star(lhs, rhs) => {
+                    let lhs = self.evaluate_expr(*lhs)?.as_number()?;
+                    let rhs = self.evaluate_expr(*rhs)?.as_number()?;
+                    Ty::Number(lhs * rhs)
+                }
             },
-        },
-    })
+            ExpressionTree::Term(term) => match term {
+                Term::Minus(lhs, rhs) => {
+                    let lhs = self.evaluate_expr(*lhs)?.as_number()?;
+                    let rhs = self.evaluate_expr(*rhs)?.as_number()?;
+                    Ty::Number(lhs - rhs)
+                }
+                Term::Plus(lhs, rhs) => {
+                    match (self.evaluate_expr(*lhs)?, self.evaluate_expr(*rhs)?) {
+                        (Ty::Number(lhs), Ty::Number(rhs)) => Ty::Number(lhs + rhs),
+                        (Ty::String(lhs), Ty::String(rhs)) => Ty::String(lhs + rhs),
+                        _ => return Err(EvaluationError::WrongPlusOperands),
+                    }
+                }
+            },
+            ExpressionTree::Comparison(comparison) => match comparison {
+                Comparison::Less(lhs, rhs) => {
+                    let lhs = self.evaluate_expr(*lhs)?.as_number()?;
+                    let rhs = self.evaluate_expr(*rhs)?.as_number()?;
+                    Ty::Boolean(lhs < rhs)
+                }
+                Comparison::LessEqual(lhs, rhs) => {
+                    let lhs = self.evaluate_expr(*lhs)?.as_number()?;
+                    let rhs = self.evaluate_expr(*rhs)?.as_number()?;
+                    Ty::Boolean(lhs <= rhs)
+                }
+                Comparison::Greater(lhs, rhs) => {
+                    let lhs = self.evaluate_expr(*lhs)?.as_number()?;
+                    let rhs = self.evaluate_expr(*rhs)?.as_number()?;
+                    Ty::Boolean(lhs > rhs)
+                }
+                Comparison::GreaterEqual(lhs, rhs) => {
+                    let lhs = self.evaluate_expr(*lhs)?.as_number()?;
+                    let rhs = self.evaluate_expr(*rhs)?.as_number()?;
+                    Ty::Boolean(lhs >= rhs)
+                }
+            },
+            ExpressionTree::Equality(equality) => match equality {
+                Equality::EqualEqual(lhs, rhs) => {
+                    match (self.evaluate_expr(*lhs)?, self.evaluate_expr(*rhs)?) {
+                        (Ty::Boolean(lhs), Ty::Boolean(rhs)) => Ty::Boolean(lhs == rhs),
+                        (Ty::Number(lhs), Ty::Number(rhs)) => Ty::Boolean(lhs == rhs),
+                        (Ty::String(lhs), Ty::String(rhs)) => Ty::Boolean(lhs == rhs),
+                        (Ty::Nil, Ty::Nil) => Ty::Boolean(true),
+                        _ => Ty::Boolean(false),
+                    }
+                }
+                Equality::BangEqual(lhs, rhs) => {
+                    match (self.evaluate_expr(*lhs)?, self.evaluate_expr(*rhs)?) {
+                        (Ty::Boolean(lhs), Ty::Boolean(rhs)) => Ty::Boolean(lhs != rhs),
+                        (Ty::Number(lhs), Ty::Number(rhs)) => Ty::Boolean(lhs != rhs),
+                        (Ty::String(lhs), Ty::String(rhs)) => Ty::Boolean(lhs != rhs),
+                        (Ty::Nil, Ty::Nil) => Ty::Boolean(true),
+                        _ => Ty::Boolean(false),
+                    }
+                }
+            },
+        })
+    }
 }
 
 // An instance of this type is a value.
+#[derive(Clone)]
 pub enum Ty<'de> {
     Boolean(bool),
     Number(f64),
