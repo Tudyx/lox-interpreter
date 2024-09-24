@@ -50,7 +50,7 @@ pub fn evaluate_expr(token_tree: TokenTree<'_>) -> Result<Ty<'_>, EvaluationErro
             Term::Plus(lhs, rhs) => match (evaluate_expr(*lhs)?, evaluate_expr(*rhs)?) {
                 (Ty::Number(lhs), Ty::Number(rhs)) => Ty::Number(lhs + rhs),
                 (Ty::String(lhs), Ty::String(rhs)) => Ty::String(lhs + rhs),
-                _ => return Err(EvaluationError::WrongType),
+                _ => return Err(EvaluationError::WrongPlusOperands),
             },
         },
         TokenTree::Comparison(comparison) => match comparison {
@@ -125,15 +125,17 @@ impl fmt::Display for Ty<'_> {
 
 #[derive(Debug)]
 pub enum EvaluationError {
-    WrongType,
     ExpectedNumber,
+    WrongPlusOperands,
 }
 
 impl fmt::Display for EvaluationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            EvaluationError::WrongType => write!(f, "wrong type"),
             EvaluationError::ExpectedNumber => write!(f, "Operand must be a number."),
+            EvaluationError::WrongPlusOperands => {
+                write!(f, "Operands must be two numbers or two strings.")
+            }
         }
     }
 }
