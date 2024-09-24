@@ -10,7 +10,7 @@ pub fn evaluate_expr<'de>(token_tree: TokenTree<'de>) -> Ty<'de> {
             Primary::True => Ty::Boolean(true),
             Primary::False => Ty::Boolean(false),
             Primary::Nil => Ty::Nil,
-            Primary::Group(_) => todo!(),
+            Primary::Group(token_tree) => evaluate_expr(*token_tree),
         },
         TokenTree::Unary(_) => todo!(),
         TokenTree::Factor(factor) => match factor {
