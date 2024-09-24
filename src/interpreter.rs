@@ -30,6 +30,8 @@ impl<'de> Interpreter<'de> {
                     if let Some(expr) = expr {
                         let value = self.evaluate_expr(expr)?;
                         self.variables.insert(ident, value);
+                    } else {
+                        self.variables.insert(ident, Ty::Nil);
                     }
                 }
             };
