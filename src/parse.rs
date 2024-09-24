@@ -2,7 +2,29 @@ use std::{fmt, iter::Peekable};
 
 use crate::lex::Token;
 
-pub fn parse_tokens<'de>(
+pub fn parse_statement<'de>(
+    tokens: &mut Peekable<impl Iterator<Item = Token<'de>>>,
+) -> Result<StatementTree<'de>, ()> {
+    if let Some(token) = tokens.next() {
+        match token {
+            Token::Print => {
+                let expr = parse_expr(tokens, 0)?;
+                if !tokens.next().is_some_and(|token| token == Token::Semicolon) {
+                    panic!("Missing semicolon")
+                }
+                return Ok(StatementTree::Print(expr));
+            }
+            _ => panic!("Invalide statement"),
+        }
+    }
+    unimplemented!()
+}
+
+pub enum StatementTree<'de> {
+    Print(TokenTree<'de>),
+    Expr(TokenTree<'de>),
+}
+pub fn parse_expr<'de>(
     tokens: &mut Peekable<impl Iterator<Item = Token<'de>>>,
     min_bp: u8,
 ) -> Result<TokenTree<'de>, ()> {
@@ -15,7 +37,7 @@ pub fn parse_tokens<'de>(
             Token::String(s) => TokenTree::Primary(Primary::String(s)),
             Token::LeftParen => {
                 let token_tree =
-                    TokenTree::Primary(Primary::Group(Box::new(parse_tokens(tokens, 0)?)));
+                    TokenTree::Primary(Primary::Group(Box::new(parse_expr(tokens, 0)?)));
                 if !tokens
                     .next()
                     .is_some_and(|token| token == Token::RightParen)
@@ -25,8 +47,8 @@ pub fn parse_tokens<'de>(
                 token_tree
             }
             // prefix operator (Unary)
-            Token::Minus => TokenTree::Unary(Unary::Minus(Box::new(parse_tokens(tokens, 5)?))),
-            Token::Bang => TokenTree::Unary(Unary::Bang(Box::new(parse_tokens(tokens, 5)?))),
+            Token::Minus => TokenTree::Unary(Unary::Minus(Box::new(parse_expr(tokens, 5)?))),
+            Token::Bang => TokenTree::Unary(Unary::Bang(Box::new(parse_expr(tokens, 5)?))),
             _ => return Err(()),
         }
     } else {
@@ -47,7 +69,7 @@ pub fn parse_tokens<'de>(
                 // Here we want to pass the next items until we encounter something that have the same level of
                 // precedence that the Star. If it's lower, for instance a +, we stop
                 // let rhs = parse_tokens(&mut std::iter::once(tokens.next().unwrap()).peekable());
-                let rhs = parse_tokens(tokens, bp)?;
+                let rhs = parse_expr(tokens, bp)?;
                 lhs = TokenTree::Factor(Factor::Star(Box::new(lhs), Box::new(rhs)));
             }
             Token::Slash => {
@@ -58,7 +80,7 @@ pub fn parse_tokens<'de>(
                     break;
                 }
                 // let rhs = parse_tokens(&mut std::iter::once(tokens.next().unwrap()).peekable());
-                let rhs = parse_tokens(tokens, bp)?;
+                let rhs = parse_expr(tokens, bp)?;
                 lhs = TokenTree::Factor(Factor::Slash(Box::new(lhs), Box::new(rhs)));
             }
             Token::Plus => {
@@ -68,7 +90,7 @@ pub fn parse_tokens<'de>(
                 } else {
                     break;
                 }
-                let rhs = parse_tokens(tokens, bp)?;
+                let rhs = parse_expr(tokens, bp)?;
                 lhs = TokenTree::Term(Term::Plus(Box::new(lhs), Box::new(rhs)));
             }
             Token::Minus => {
@@ -78,7 +100,7 @@ pub fn parse_tokens<'de>(
                 } else {
                     break;
                 }
-                let rhs = parse_tokens(tokens, bp)?;
+                let rhs = parse_expr(tokens, bp)?;
                 lhs = TokenTree::Term(Term::Minus(Box::new(lhs), Box::new(rhs)));
             }
             Token::Less => {
@@ -88,7 +110,7 @@ pub fn parse_tokens<'de>(
                 } else {
                     break;
                 }
-                let rhs = parse_tokens(tokens, bp)?;
+                let rhs = parse_expr(tokens, bp)?;
                 lhs = TokenTree::Comparison(Comparison::Less(Box::new(lhs), Box::new(rhs)));
             }
             Token::LessEqual => {
@@ -98,7 +120,7 @@ pub fn parse_tokens<'de>(
                 } else {
                     break;
                 }
-                let rhs = parse_tokens(tokens, bp)?;
+                let rhs = parse_expr(tokens, bp)?;
                 lhs = TokenTree::Comparison(Comparison::LessEqual(Box::new(lhs), Box::new(rhs)));
             }
             Token::Greater => {
@@ -109,7 +131,7 @@ pub fn parse_tokens<'de>(
                     break;
                 }
 
-                let rhs = parse_tokens(tokens, bp)?;
+                let rhs = parse_expr(tokens, bp)?;
                 lhs = TokenTree::Comparison(Comparison::Greater(Box::new(lhs), Box::new(rhs)));
             }
             Token::GreaterEqual => {
@@ -119,7 +141,7 @@ pub fn parse_tokens<'de>(
                 } else {
                     break;
                 }
-                let rhs = parse_tokens(tokens, bp)?;
+                let rhs = parse_expr(tokens, bp)?;
                 lhs = TokenTree::Comparison(Comparison::GreaterEqual(Box::new(lhs), Box::new(rhs)));
             }
 
@@ -130,7 +152,7 @@ pub fn parse_tokens<'de>(
                 } else {
                     break;
                 }
-                let rhs = parse_tokens(tokens, bp)?;
+                let rhs = parse_expr(tokens, bp)?;
                 lhs = TokenTree::Equality(Equality::EqualEqual(Box::new(lhs), Box::new(rhs)));
             }
             Token::BangEqual => {
@@ -140,7 +162,7 @@ pub fn parse_tokens<'de>(
                 } else {
                     break;
                 }
-                let rhs = parse_tokens(tokens, bp)?;
+                let rhs = parse_expr(tokens, bp)?;
                 lhs = TokenTree::Equality(Equality::BangEqual(Box::new(lhs), Box::new(rhs)));
             }
             _ => {

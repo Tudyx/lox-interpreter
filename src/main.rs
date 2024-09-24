@@ -2,7 +2,10 @@ mod exec;
 mod lex;
 mod parse;
 
-use crate::{exec::evaluate_expr, lex::Lexer, parse::parse_tokens};
+use exec::evaluate_statement;
+use parse::parse_statement;
+
+use crate::{exec::evaluate_expr, lex::Lexer, parse::parse_expr};
 use std::{env, fs};
 
 fn main() {
@@ -45,7 +48,7 @@ fn main() {
                 Err(_) => std::process::exit(65),
             });
             let tokens = &mut tokens.into_iter().peekable();
-            let Ok(token_tree) = parse_tokens(tokens, 0) else {
+            let Ok(token_tree) = parse_expr(tokens, 0) else {
                 std::process::exit(65);
             };
             println!("{token_tree}");
@@ -56,7 +59,8 @@ fn main() {
                 Err(_) => std::process::exit(65),
             });
             let tokens = &mut tokens.into_iter().peekable();
-            let Ok(token_tree) = parse_tokens(tokens, 0) else {
+
+            let Ok(token_tree) = parse_expr(tokens, 0) else {
                 std::process::exit(65);
             };
             match evaluate_expr(token_tree) {
@@ -66,6 +70,20 @@ fn main() {
                     std::process::exit(70);
                 }
             };
+        }
+        "run" => {
+            let tokens = Lexer::new(&file_contents).map(|token| match token {
+                Ok(token) => token,
+                Err(_) => std::process::exit(65),
+            });
+            let tokens = &mut tokens.into_iter().peekable();
+            let Ok(token_tree) = parse_statement(tokens) else {
+                std::process::exit(65);
+            };
+            if let Err(err) = evaluate_statement(token_tree) {
+                eprintln!("{err}");
+                std::process::exit(70);
+            }
         }
         _ => {
             eprintln!("Unknown command: {}", command);

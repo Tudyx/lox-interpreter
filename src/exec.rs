@@ -1,6 +1,17 @@
 use std::{borrow::Cow, fmt};
 
-use crate::parse::{Comparison, Equality, Factor, Primary, Term, TokenTree, Unary};
+use crate::parse::{Comparison, Equality, Factor, Primary, StatementTree, Term, TokenTree, Unary};
+
+pub fn evaluate_statement(token_tree: StatementTree<'_>) -> Result<(), EvaluationError> {
+    match token_tree {
+        StatementTree::Print(expr) => {
+            let value = evaluate_expr(expr)?;
+            println!("{value}");
+        }
+        StatementTree::Expr(_) => todo!(),
+    };
+    Ok(())
+}
 
 pub fn evaluate_expr(token_tree: TokenTree<'_>) -> Result<Ty<'_>, EvaluationError> {
     Ok(match token_tree {
