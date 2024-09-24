@@ -1,6 +1,6 @@
 use std::{borrow::Cow, fmt};
 
-use crate::parse::{Factor, Primary, Term, TokenTree, Unary};
+use crate::parse::{Comparison, Factor, Primary, Term, TokenTree, Unary};
 
 pub fn evaluate_expr(token_tree: TokenTree<'_>) -> Result<Ty<'_>, EvaluationError> {
     Ok(match token_tree {
@@ -53,7 +53,28 @@ pub fn evaluate_expr(token_tree: TokenTree<'_>) -> Result<Ty<'_>, EvaluationErro
                 _ => return Err(EvaluationError::WrongType),
             },
         },
-        TokenTree::Comparison(_) => todo!(),
+        TokenTree::Comparison(comparison) => match comparison {
+            Comparison::Less(lhs, rhs) => {
+                let lhs = evaluate_expr(*lhs)?.as_number()?;
+                let rhs = evaluate_expr(*rhs)?.as_number()?;
+                Ty::Boolean(lhs < rhs)
+            }
+            Comparison::LessEqual(lhs, rhs) => {
+                let lhs = evaluate_expr(*lhs)?.as_number()?;
+                let rhs = evaluate_expr(*rhs)?.as_number()?;
+                Ty::Boolean(lhs <= rhs)
+            }
+            Comparison::Greater(lhs, rhs) => {
+                let lhs = evaluate_expr(*lhs)?.as_number()?;
+                let rhs = evaluate_expr(*rhs)?.as_number()?;
+                Ty::Boolean(lhs > rhs)
+            }
+            Comparison::GreaterEqual(lhs, rhs) => {
+                let lhs = evaluate_expr(*lhs)?.as_number()?;
+                let rhs = evaluate_expr(*rhs)?.as_number()?;
+                Ty::Boolean(lhs >= rhs)
+            }
+        },
         TokenTree::Equality(_) => todo!(),
     })
 }
