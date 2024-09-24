@@ -25,17 +25,21 @@ pub fn evaluate_expr(token_tree: TokenTree<'_>) -> Result<Ty<'_>, EvaluationErro
                 }
             }
             Unary::Minus(token_tree) => {
-                let value = evaluate_expr(*token_tree)?;
-                if let Ty::Number(value) = value {
-                    Ty::Number(-value)
-                } else {
-                    return Err(EvaluationError::WrongType);
-                }
+                let value = evaluate_expr(*token_tree)?.as_number()?;
+                Ty::Number(-value)
             }
         },
         TokenTree::Factor(factor) => match factor {
-            Factor::Slash(_lhs, _rhs) => todo!(),
-            Factor::Star(_lhs, _rhs) => todo!(),
+            Factor::Slash(lhs, rhs) => {
+                let lhs = evaluate_expr(*lhs)?.as_number()?;
+                let rhs = evaluate_expr(*rhs)?.as_number()?;
+                Ty::Number(lhs / rhs)
+            }
+            Factor::Star(lhs, rhs) => {
+                let lhs = evaluate_expr(*lhs)?.as_number()?;
+                let rhs = evaluate_expr(*rhs)?.as_number()?;
+                Ty::Number(lhs * rhs)
+            }
         },
         TokenTree::Term(_) => todo!(),
         TokenTree::Comparison(_) => todo!(),
@@ -49,6 +53,16 @@ pub enum Ty<'de> {
     Number(f64),
     String(&'de str),
     Nil,
+}
+
+impl Ty<'_> {
+    fn as_number(&self) -> Result<f64, EvaluationError> {
+        if let Ty::Number(value) = &self {
+            Ok(*value)
+        } else {
+            Err(EvaluationError::WrongType)
+        }
+    }
 }
 
 impl fmt::Display for Ty<'_> {

@@ -7,7 +7,7 @@ pub fn parse_tokens<'de>(
     min_bp: u8,
 ) -> Result<TokenTree<'de>, ()> {
     let mut lhs = if let Some(token) = tokens.next() {
-        match dbg!(token) {
+        match token {
             Token::Nil => TokenTree::Primary(Primary::Nil),
             Token::True => TokenTree::Primary(Primary::True),
             Token::False => TokenTree::Primary(Primary::False),
@@ -32,12 +32,11 @@ pub fn parse_tokens<'de>(
     } else {
         TokenTree::Primary(Primary::Nil)
     };
-    dbg!(&lhs);
 
     // Here we don't passe the rest of the token to the recursive call,
     // so we must loop ourself
     while let Some(next_token) = tokens.peek() {
-        match dbg!(next_token) {
+        match next_token {
             Token::Star => {
                 let bp = 4;
                 if bp > min_bp {
