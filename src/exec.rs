@@ -5,8 +5,8 @@ use crate::parse::{Factor, Primary, TokenTree};
 pub fn evaluate_expr<'de>(token_tree: TokenTree<'de>) -> Ty<'de> {
     match token_tree {
         TokenTree::Primary(primary) => match primary {
-            Primary::String(_) => todo!(),
-            Primary::Number(_) => todo!(),
+            Primary::String(string) => Ty::String(string),
+            Primary::Number(number) => Ty::Number(number),
             Primary::True => Ty::Boolean(true),
             Primary::False => Ty::Boolean(false),
             Primary::Nil => Ty::Nil,
