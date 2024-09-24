@@ -14,7 +14,10 @@ impl<'de> Interpreter<'de> {
             variables: HashMap::new(),
         }
     }
-    pub fn evaluate(&mut self, token_tree: Vec<StatementTree<'de>>) -> Result<(), EvaluationError> {
+    pub fn evaluate(
+        &mut self,
+        token_tree: Vec<StatementTree<'de>>,
+    ) -> Result<(), EvaluationError<'de>> {
         for statement in token_tree {
             match statement {
                 StatementTree::Print(expr) => {
@@ -42,7 +45,7 @@ impl<'de> Interpreter<'de> {
     pub fn evaluate_expr(
         &self,
         token_tree: ExpressionTree<'de>,
-    ) -> Result<Ty<'de>, EvaluationError> {
+    ) -> Result<Ty<'de>, EvaluationError<'de>> {
         Ok(match token_tree {
             ExpressionTree::Primary(primary) => match primary {
                 Primary::String(string) => Ty::String(Cow::Borrowed(string)),
@@ -54,7 +57,7 @@ impl<'de> Interpreter<'de> {
                 Primary::Identifier(ident) => self
                     .variables
                     .get(ident)
-                    .ok_or_else(|| EvaluationError::UndefinedVariable(ident.to_string()))?
+                    .ok_or(EvaluationError::UndefinedVariable(ident))?
                     .clone(),
             },
             ExpressionTree::Unary(unary) => match unary {
@@ -157,8 +160,11 @@ pub enum Ty<'de> {
     Nil,
 }
 
-impl Ty<'_> {
-    fn as_number(&self) -> Result<f64, EvaluationError> {
+// We use explicit lifetime here because otherwise lifetime elision
+// will bind the lifetime of the return type to `self` but it must be bound to
+// the file content lifetime.
+impl<'de> Ty<'de> {
+    fn as_number(&self) -> Result<f64, EvaluationError<'de>> {
         if let Ty::Number(value) = &self {
             Ok(*value)
         } else {
@@ -179,13 +185,13 @@ impl fmt::Display for Ty<'_> {
 }
 
 #[derive(Debug)]
-pub enum EvaluationError {
+pub enum EvaluationError<'de> {
     ExpectedNumber,
     WrongPlusOperands,
-    UndefinedVariable(String),
+    UndefinedVariable(&'de str),
 }
 
-impl fmt::Display for EvaluationError {
+impl fmt::Display for EvaluationError<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             EvaluationError::ExpectedNumber => {
