@@ -1,6 +1,6 @@
 use std::{borrow::Cow, fmt};
 
-use crate::parse::{Comparison, Factor, Primary, Term, TokenTree, Unary};
+use crate::parse::{Comparison, Equality, Factor, Primary, Term, TokenTree, Unary};
 
 pub fn evaluate_expr(token_tree: TokenTree<'_>) -> Result<Ty<'_>, EvaluationError> {
     Ok(match token_tree {
@@ -75,7 +75,22 @@ pub fn evaluate_expr(token_tree: TokenTree<'_>) -> Result<Ty<'_>, EvaluationErro
                 Ty::Boolean(lhs >= rhs)
             }
         },
-        TokenTree::Equality(_) => todo!(),
+        TokenTree::Equality(equality) => match equality {
+            Equality::EqualEqual(lhs, rhs) => match (evaluate_expr(*lhs)?, evaluate_expr(*rhs)?) {
+                (Ty::Boolean(lhs), Ty::Boolean(rhs)) => Ty::Boolean(lhs == rhs),
+                (Ty::Number(lhs), Ty::Number(rhs)) => Ty::Boolean(lhs == rhs),
+                (Ty::String(lhs), Ty::String(rhs)) => Ty::Boolean(lhs == rhs),
+                (Ty::Nil, Ty::Nil) => Ty::Boolean(true),
+                _ => Ty::Boolean(false),
+            },
+            Equality::BangEqual(lhs, rhs) => match (evaluate_expr(*lhs)?, evaluate_expr(*rhs)?) {
+                (Ty::Boolean(lhs), Ty::Boolean(rhs)) => Ty::Boolean(lhs != rhs),
+                (Ty::Number(lhs), Ty::Number(rhs)) => Ty::Boolean(lhs != rhs),
+                (Ty::String(lhs), Ty::String(rhs)) => Ty::Boolean(lhs != rhs),
+                (Ty::Nil, Ty::Nil) => Ty::Boolean(true),
+                _ => Ty::Boolean(false),
+            },
+        },
     })
 }
 

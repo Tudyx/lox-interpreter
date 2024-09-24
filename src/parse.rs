@@ -144,7 +144,6 @@ pub fn parse_tokens<'de>(
                 lhs = TokenTree::Equality(Equality::BangEqual(Box::new(lhs), Box::new(rhs)));
             }
             _ => {
-                eprintln!("Not operator found");
                 break;
             }
         }
