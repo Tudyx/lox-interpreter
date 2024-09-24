@@ -107,7 +107,7 @@ impl Ty<'_> {
         if let Ty::Number(value) = &self {
             Ok(*value)
         } else {
-            Err(EvaluationError::WrongType)
+            Err(EvaluationError::ExpectedNumber)
         }
     }
 }
@@ -126,12 +126,14 @@ impl fmt::Display for Ty<'_> {
 #[derive(Debug)]
 pub enum EvaluationError {
     WrongType,
+    ExpectedNumber,
 }
 
 impl fmt::Display for EvaluationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             EvaluationError::WrongType => write!(f, "wrong type"),
+            EvaluationError::ExpectedNumber => write!(f, "Operand must be a number."),
         }
     }
 }

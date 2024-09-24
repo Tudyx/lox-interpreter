@@ -63,7 +63,7 @@ fn main() {
                 Ok(value) => println!("{value}"),
                 Err(err) => {
                     eprintln!("{err}");
-                    std::process::exit(65);
+                    std::process::exit(70);
                 }
             };
         }
