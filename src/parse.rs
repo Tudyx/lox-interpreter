@@ -2,6 +2,7 @@ use std::{fmt, iter::Peekable};
 
 use crate::lex::Token;
 
+// As we only have a single token lookahead, `Peekable` is all we need.
 pub fn parse_statements<'de>(
     tokens: &'de mut Peekable<impl Iterator<Item = Token<'de>>>,
 ) -> Result<Vec<StatementTree<'de>>, ParseExpressionError> {
@@ -348,11 +349,26 @@ impl fmt::Display for Equality<'_> {
     }
 }
 
+#[derive(Debug, PartialEq)]
+pub enum Assignement<'de> {
+    Equality(&'de str, Box<ExpressionTree<'de>>),
+}
+
+impl fmt::Display for Assignement<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Assignement::Equality(ident, expr) => write!(f, "{ident} = {expr}"),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum ParseExpressionError<'de> {
     InvalidToken(Token<'de>),
     MissingRightParen,
 }
+
+impl<'de> std::error::Error for ParseExpressionError<'de> {}
 
 impl fmt::Display for ParseExpressionError<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

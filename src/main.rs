@@ -71,7 +71,7 @@ fn main() {
                 std::process::exit(65);
             };
 
-            let interpreter = Interpreter::new();
+            let mut interpreter = Interpreter::new();
 
             match interpreter.evaluate_expr(token_tree) {
                 Ok(value) => println!("{value}"),
@@ -97,7 +97,7 @@ fn main() {
                     std::process::exit(65)
                 }
             };
-            eprintln!("Find {} statement", token_tree.len());
+            // eprintln!("Find {} statement", token_tree.len());
             let mut interpreter = Interpreter::new();
             if let Err(err) = interpreter.evaluate(token_tree) {
                 eprintln!("{err}");

@@ -244,6 +244,8 @@ pub struct LexingError {
     line_count: usize,
 }
 
+impl std::error::Error for LexingError {}
+
 impl fmt::Display for LexingError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let line_count = self.line_count;

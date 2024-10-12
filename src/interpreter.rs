@@ -188,9 +188,13 @@ impl fmt::Display for Ty<'_> {
 #[derive(Debug)]
 pub enum EvaluationError<'de> {
     ExpectedNumber,
-    WrongPlusOperands,
+    ExpectedValue,
+    UndeclaredVariable(&'de str),
     UndefinedVariable(&'de str),
+    WrongPlusOperands,
 }
+
+impl<'de> std::error::Error for EvaluationError<'de> {}
 
 impl fmt::Display for EvaluationError<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -203,6 +207,10 @@ impl fmt::Display for EvaluationError<'_> {
                 write!(f, "Operands must be two numbers or two strings.")
             }
             EvaluationError::UndefinedVariable(ident) => write!(f, "Undefined variable '{ident}'."),
+            EvaluationError::UndeclaredVariable(ident) => {
+                write!(f, "Undeclared variable '{ident}'.")
+            }
+            EvaluationError::ExpectedValue => write!(f, "Expected a value expression"),
         }
     }
 }
