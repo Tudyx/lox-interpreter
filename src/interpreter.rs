@@ -6,7 +6,7 @@ use crate::parse::{
 
 pub struct Interpreter<'de> {
     /// Map variable identitifer and their value.
-    variables: HashMap<&'de str, Ty<'de>>,
+    variables: HashMap<&'de str, Value<'de>>,
 }
 
 impl<'de> Interpreter<'de> {
@@ -35,7 +35,7 @@ impl<'de> Interpreter<'de> {
                         let value = self.evaluate_expr(expr)?;
                         self.variables.insert(ident, value);
                     } else {
-                        self.variables.insert(ident, Ty::Nil);
+                        self.variables.insert(ident, Value::Nil);
                     }
                 }
             };
@@ -46,14 +46,14 @@ impl<'de> Interpreter<'de> {
     pub fn evaluate_expr(
         &mut self,
         token_tree: ExpressionTree<'de>,
-    ) -> Result<Ty<'de>, EvaluationError<'de>> {
+    ) -> Result<Value<'de>, EvaluationError<'de>> {
         Ok(match token_tree {
             ExpressionTree::Primary(primary) => match primary {
-                Primary::String(string) => Ty::String(Cow::Borrowed(string)),
-                Primary::Number(number) => Ty::Number(number),
-                Primary::True => Ty::Boolean(true),
-                Primary::False => Ty::Boolean(false),
-                Primary::Nil => Ty::Nil,
+                Primary::String(string) => Value::String(Cow::Borrowed(string)),
+                Primary::Number(number) => Value::Number(number),
+                Primary::True => Value::Boolean(true),
+                Primary::False => Value::Boolean(false),
+                Primary::Nil => Value::Nil,
                 Primary::Group(token_tree) => self.evaluate_expr(*token_tree)?,
                 Primary::Identifier(ident) => self
                     .variables
@@ -65,43 +65,43 @@ impl<'de> Interpreter<'de> {
                 Unary::Bang(token_tree) => {
                     let value = self.evaluate_expr(*token_tree)?;
                     match value {
-                        Ty::Boolean(boolean) => match boolean {
-                            true => Ty::Boolean(false),
-                            false => Ty::Boolean(true),
+                        Value::Boolean(boolean) => match boolean {
+                            true => Value::Boolean(false),
+                            false => Value::Boolean(true),
                         },
-                        Ty::Number(_) | Ty::String(_) => Ty::Boolean(false),
-                        Ty::Nil => Ty::Boolean(true),
+                        Value::Number(_) | Value::String(_) => Value::Boolean(false),
+                        Value::Nil => Value::Boolean(true),
                     }
                 }
                 Unary::Minus(token_tree) => {
                     let value_tmp = self.evaluate_expr(*token_tree)?;
                     let value = value_tmp.as_number()?;
 
-                    Ty::Number(-value)
+                    Value::Number(-value)
                 }
             },
             ExpressionTree::Factor(factor) => match factor {
                 Factor::Slash(lhs, rhs) => {
                     let lhs = self.evaluate_expr(*lhs)?.as_number()?;
                     let rhs = self.evaluate_expr(*rhs)?.as_number()?;
-                    Ty::Number(lhs / rhs)
+                    Value::Number(lhs / rhs)
                 }
                 Factor::Star(lhs, rhs) => {
                     let lhs = self.evaluate_expr(*lhs)?.as_number()?;
                     let rhs = self.evaluate_expr(*rhs)?.as_number()?;
-                    Ty::Number(lhs * rhs)
+                    Value::Number(lhs * rhs)
                 }
             },
             ExpressionTree::Term(term) => match term {
                 Term::Minus(lhs, rhs) => {
                     let lhs = self.evaluate_expr(*lhs)?.as_number()?;
                     let rhs = self.evaluate_expr(*rhs)?.as_number()?;
-                    Ty::Number(lhs - rhs)
+                    Value::Number(lhs - rhs)
                 }
                 Term::Plus(lhs, rhs) => {
                     match (self.evaluate_expr(*lhs)?, self.evaluate_expr(*rhs)?) {
-                        (Ty::Number(lhs), Ty::Number(rhs)) => Ty::Number(lhs + rhs),
-                        (Ty::String(lhs), Ty::String(rhs)) => Ty::String(lhs + rhs),
+                        (Value::Number(lhs), Value::Number(rhs)) => Value::Number(lhs + rhs),
+                        (Value::String(lhs), Value::String(rhs)) => Value::String(lhs + rhs),
                         _ => return Err(EvaluationError::WrongPlusOperands),
                     }
                 }
@@ -110,41 +110,41 @@ impl<'de> Interpreter<'de> {
                 Comparison::Less(lhs, rhs) => {
                     let lhs = self.evaluate_expr(*lhs)?.as_number()?;
                     let rhs = self.evaluate_expr(*rhs)?.as_number()?;
-                    Ty::Boolean(lhs < rhs)
+                    Value::Boolean(lhs < rhs)
                 }
                 Comparison::LessEqual(lhs, rhs) => {
                     let lhs = self.evaluate_expr(*lhs)?.as_number()?;
                     let rhs = self.evaluate_expr(*rhs)?.as_number()?;
-                    Ty::Boolean(lhs <= rhs)
+                    Value::Boolean(lhs <= rhs)
                 }
                 Comparison::Greater(lhs, rhs) => {
                     let lhs = self.evaluate_expr(*lhs)?.as_number()?;
                     let rhs = self.evaluate_expr(*rhs)?.as_number()?;
-                    Ty::Boolean(lhs > rhs)
+                    Value::Boolean(lhs > rhs)
                 }
                 Comparison::GreaterEqual(lhs, rhs) => {
                     let lhs = self.evaluate_expr(*lhs)?.as_number()?;
                     let rhs = self.evaluate_expr(*rhs)?.as_number()?;
-                    Ty::Boolean(lhs >= rhs)
+                    Value::Boolean(lhs >= rhs)
                 }
             },
             ExpressionTree::Equality(equality) => match equality {
                 Equality::EqualEqual(lhs, rhs) => {
                     match (self.evaluate_expr(*lhs)?, self.evaluate_expr(*rhs)?) {
-                        (Ty::Boolean(lhs), Ty::Boolean(rhs)) => Ty::Boolean(lhs == rhs),
-                        (Ty::Number(lhs), Ty::Number(rhs)) => Ty::Boolean(lhs == rhs),
-                        (Ty::String(lhs), Ty::String(rhs)) => Ty::Boolean(lhs == rhs),
-                        (Ty::Nil, Ty::Nil) => Ty::Boolean(true),
-                        _ => Ty::Boolean(false),
+                        (Value::Boolean(lhs), Value::Boolean(rhs)) => Value::Boolean(lhs == rhs),
+                        (Value::Number(lhs), Value::Number(rhs)) => Value::Boolean(lhs == rhs),
+                        (Value::String(lhs), Value::String(rhs)) => Value::Boolean(lhs == rhs),
+                        (Value::Nil, Value::Nil) => Value::Boolean(true),
+                        _ => Value::Boolean(false),
                     }
                 }
                 Equality::BangEqual(lhs, rhs) => {
                     match (self.evaluate_expr(*lhs)?, self.evaluate_expr(*rhs)?) {
-                        (Ty::Boolean(lhs), Ty::Boolean(rhs)) => Ty::Boolean(lhs != rhs),
-                        (Ty::Number(lhs), Ty::Number(rhs)) => Ty::Boolean(lhs != rhs),
-                        (Ty::String(lhs), Ty::String(rhs)) => Ty::Boolean(lhs != rhs),
-                        (Ty::Nil, Ty::Nil) => Ty::Boolean(true),
-                        _ => Ty::Boolean(false),
+                        (Value::Boolean(lhs), Value::Boolean(rhs)) => Value::Boolean(lhs != rhs),
+                        (Value::Number(lhs), Value::Number(rhs)) => Value::Boolean(lhs != rhs),
+                        (Value::String(lhs), Value::String(rhs)) => Value::Boolean(lhs != rhs),
+                        (Value::Nil, Value::Nil) => Value::Boolean(true),
+                        _ => Value::Boolean(false),
                     }
                 }
             },
@@ -163,7 +163,7 @@ impl<'de> Interpreter<'de> {
 
 // An instance of this type is a value.
 #[derive(Clone)]
-pub enum Ty<'de> {
+pub enum Value<'de> {
     Boolean(bool),
     Number(f64),
     String(Cow<'de, str>),
@@ -173,9 +173,9 @@ pub enum Ty<'de> {
 // We use explicit lifetime here because otherwise lifetime elision
 // will bind the lifetime of the return type to `self` but it must be bound to
 // the file content lifetime. (The one in the string variant)
-impl<'de> Ty<'de> {
+impl<'de> Value<'de> {
     fn as_number(&self) -> Result<f64, EvaluationError<'de>> {
-        if let Ty::Number(value) = &self {
+        if let Value::Number(value) = &self {
             Ok(*value)
         } else {
             Err(EvaluationError::ExpectedNumber)
@@ -183,13 +183,13 @@ impl<'de> Ty<'de> {
     }
 }
 
-impl fmt::Display for Ty<'_> {
+impl fmt::Display for Value<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Ty::Boolean(boolean) => write!(f, "{boolean}"),
-            Ty::Number(number) => write!(f, "{number}"),
-            Ty::String(string) => write!(f, "{string}"),
-            Ty::Nil => write!(f, "nil"),
+            Value::Boolean(boolean) => write!(f, "{boolean}"),
+            Value::Number(number) => write!(f, "{number}"),
+            Value::String(string) => write!(f, "{string}"),
+            Value::Nil => write!(f, "nil"),
         }
     }
 }
