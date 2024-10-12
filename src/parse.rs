@@ -65,6 +65,7 @@ pub enum StatementTree<'de> {
     },
 }
 
+// Pratt parser
 pub fn parse_expr<'de>(
     tokens: &mut Peekable<impl Iterator<Item = Token<'de>>>,
     min_bp: u8,
@@ -77,7 +78,7 @@ pub fn parse_expr<'de>(
             Token::Number(n, _) => ExpressionTree::Primary(Primary::Number(n)),
             Token::String(s) => ExpressionTree::Primary(Primary::String(s)),
             Token::LeftParen => {
-                let token_tree =
+                let expr_tree =
                     ExpressionTree::Primary(Primary::Group(Box::new(parse_expr(tokens, 0)?)));
                 if !tokens
                     .next()
@@ -85,7 +86,7 @@ pub fn parse_expr<'de>(
                 {
                     return Err(ParseExpressionError::MissingRightParen);
                 }
-                token_tree
+                expr_tree
             }
             Token::Identifier(ident) => ExpressionTree::Primary(Primary::Identifier(ident)),
             // prefix operator (Unary)
@@ -97,7 +98,7 @@ pub fn parse_expr<'de>(
         ExpressionTree::Primary(Primary::Nil)
     };
 
-    // Here we don't passe the rest of the token to the recursive call,
+    // Here we don't pass the rest of the token to the recursive call,
     // so we must loop ourself
     while let Some(next_token) = tokens.peek() {
         match next_token {

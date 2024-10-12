@@ -5,6 +5,7 @@ use crate::parse::{
 };
 
 pub struct Interpreter<'de> {
+    /// Map variable identitifer and their value.
     variables: HashMap<&'de str, Ty<'de>>,
 }
 
@@ -162,7 +163,7 @@ pub enum Ty<'de> {
 
 // We use explicit lifetime here because otherwise lifetime elision
 // will bind the lifetime of the return type to `self` but it must be bound to
-// the file content lifetime.
+// the file content lifetime. (The one in the string variant)
 impl<'de> Ty<'de> {
     fn as_number(&self) -> Result<f64, EvaluationError<'de>> {
         if let Ty::Number(value) = &self {
