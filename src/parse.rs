@@ -89,7 +89,14 @@ pub fn parse_expr<'de>(
                 }
                 expr_tree
             }
-            Token::Identifier(ident) => ExpressionTree::Primary(Primary::Identifier(ident)),
+            Token::Identifier(ident) => {
+                if tokens.next_if_eq(&Token::Equal).is_some() {
+                    ExpressionTree::Assignment(ident, Box::new(parse_expr(tokens, 1)?))
+                } else {
+                    ExpressionTree::Primary(Primary::Identifier(ident))
+                }
+            }
+
             // prefix operator (Unary)
             Token::Minus => ExpressionTree::Unary(Unary::Minus(Box::new(parse_expr(tokens, 5)?))),
             Token::Bang => ExpressionTree::Unary(Unary::Bang(Box::new(parse_expr(tokens, 5)?))),
@@ -104,7 +111,7 @@ pub fn parse_expr<'de>(
     while let Some(next_token) = tokens.peek() {
         match next_token {
             Token::Star => {
-                let bp = 4;
+                let bp = 5;
                 if bp > min_bp {
                     tokens.next();
                 } else {
@@ -117,7 +124,7 @@ pub fn parse_expr<'de>(
                 lhs = ExpressionTree::Factor(Factor::Star(Box::new(lhs), Box::new(rhs)));
             }
             Token::Slash => {
-                let bp = 4;
+                let bp = 5;
                 if bp > min_bp {
                     tokens.next();
                 } else {
@@ -127,7 +134,7 @@ pub fn parse_expr<'de>(
                 lhs = ExpressionTree::Factor(Factor::Slash(Box::new(lhs), Box::new(rhs)));
             }
             Token::Plus => {
-                let bp = 3;
+                let bp = 4;
                 if bp > min_bp {
                     tokens.next();
                 } else {
@@ -137,7 +144,7 @@ pub fn parse_expr<'de>(
                 lhs = ExpressionTree::Term(Term::Plus(Box::new(lhs), Box::new(rhs)));
             }
             Token::Minus => {
-                let bp = 3;
+                let bp = 4;
                 if bp > min_bp {
                     tokens.next();
                 } else {
@@ -147,7 +154,7 @@ pub fn parse_expr<'de>(
                 lhs = ExpressionTree::Term(Term::Minus(Box::new(lhs), Box::new(rhs)));
             }
             Token::Less => {
-                let bp = 2;
+                let bp = 3;
                 if bp > min_bp {
                     tokens.next();
                 } else {
@@ -157,7 +164,7 @@ pub fn parse_expr<'de>(
                 lhs = ExpressionTree::Comparison(Comparison::Less(Box::new(lhs), Box::new(rhs)));
             }
             Token::LessEqual => {
-                let bp = 2;
+                let bp = 3;
                 if bp > min_bp {
                     tokens.next();
                 } else {
@@ -168,7 +175,7 @@ pub fn parse_expr<'de>(
                     ExpressionTree::Comparison(Comparison::LessEqual(Box::new(lhs), Box::new(rhs)));
             }
             Token::Greater => {
-                let bp = 2;
+                let bp = 3;
                 if bp > min_bp {
                     tokens.next();
                 } else {
@@ -179,7 +186,7 @@ pub fn parse_expr<'de>(
                 lhs = ExpressionTree::Comparison(Comparison::Greater(Box::new(lhs), Box::new(rhs)));
             }
             Token::GreaterEqual => {
-                let bp = 2;
+                let bp = 3;
                 if bp > min_bp {
                     tokens.next();
                 } else {
@@ -193,7 +200,7 @@ pub fn parse_expr<'de>(
             }
 
             Token::EqualEqual => {
-                let bp = 1;
+                let bp = 2;
                 if bp > min_bp {
                     tokens.next();
                 } else {
@@ -203,7 +210,7 @@ pub fn parse_expr<'de>(
                 lhs = ExpressionTree::Equality(Equality::EqualEqual(Box::new(lhs), Box::new(rhs)));
             }
             Token::BangEqual => {
-                let bp = 1;
+                let bp = 2;
                 if bp > min_bp {
                     tokens.next();
                 } else {
@@ -230,6 +237,7 @@ pub enum ExpressionTree<'de> {
     Term(Term<'de>),
     Comparison(Comparison<'de>),
     Equality(Equality<'de>),
+    Assignment(&'de str, Box<ExpressionTree<'de>>),
 }
 
 impl fmt::Display for ExpressionTree<'_> {
@@ -241,6 +249,7 @@ impl fmt::Display for ExpressionTree<'_> {
             ExpressionTree::Term(term) => write!(f, "{term}"),
             ExpressionTree::Comparison(comparison) => write!(f, "{comparison}"),
             ExpressionTree::Equality(equality) => write!(f, "{equality}"),
+            ExpressionTree::Assignment(ident, expr) => write!(f, "{ident} = {expr}"),
         }
     }
 }
@@ -345,19 +354,6 @@ impl fmt::Display for Equality<'_> {
         match self {
             Equality::EqualEqual(left, right) => write!(f, "(== {left} {right})"),
             Equality::BangEqual(left, right) => write!(f, "(!= {left} {right})"),
-        }
-    }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Assignement<'de> {
-    Equality(&'de str, Box<ExpressionTree<'de>>),
-}
-
-impl fmt::Display for Assignement<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Assignement::Equality(ident, expr) => write!(f, "{ident} = {expr}"),
         }
     }
 }

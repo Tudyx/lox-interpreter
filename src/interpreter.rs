@@ -44,7 +44,7 @@ impl<'de> Interpreter<'de> {
     }
 
     pub fn evaluate_expr(
-        &self,
+        &mut self,
         token_tree: ExpressionTree<'de>,
     ) -> Result<Ty<'de>, EvaluationError<'de>> {
         Ok(match token_tree {
@@ -148,6 +148,15 @@ impl<'de> Interpreter<'de> {
                     }
                 }
             },
+            ExpressionTree::Assignment(ident, expr) => {
+                if !self.variables.contains_key(ident) {
+                    return Err(EvaluationError::UndeclaredVariable(ident));
+                }
+
+                let value = self.evaluate_expr(*expr)?;
+                self.variables.insert(ident, value.clone());
+                value
+            }
         })
     }
 }
@@ -188,7 +197,6 @@ impl fmt::Display for Ty<'_> {
 #[derive(Debug)]
 pub enum EvaluationError<'de> {
     ExpectedNumber,
-    ExpectedValue,
     UndeclaredVariable(&'de str),
     UndefinedVariable(&'de str),
     WrongPlusOperands,
@@ -210,7 +218,6 @@ impl fmt::Display for EvaluationError<'_> {
             EvaluationError::UndeclaredVariable(ident) => {
                 write!(f, "Undeclared variable '{ident}'.")
             }
-            EvaluationError::ExpectedValue => write!(f, "Expected a value expression"),
         }
     }
 }
