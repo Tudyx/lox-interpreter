@@ -97,7 +97,6 @@ fn main() {
                     std::process::exit(65)
                 }
             };
-            // eprintln!("Find {} statement", token_tree.len());
             let mut interpreter = Interpreter::new();
             if let Err(err) = interpreter.evaluate(token_tree) {
                 eprintln!("{err}");

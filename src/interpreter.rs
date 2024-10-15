@@ -38,6 +38,7 @@ impl<'de> Interpreter<'de> {
                         self.variables.insert(ident, Value::Nil);
                     }
                 }
+                StatementTree::Block(statements) => self.evaluate(statements)?,
             };
         }
         Ok(())

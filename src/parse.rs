@@ -3,9 +3,12 @@ use std::{fmt, iter::Peekable};
 use crate::lex::Token;
 
 // As we only have a single token lookahead, `Peekable` is all we need.
+//
+// Lifetime elision will put the wrong lifetime to the return time so we
+// must be explicit.
 pub fn parse_statements<'de>(
-    tokens: &'de mut Peekable<impl Iterator<Item = Token<'de>>>,
-) -> Result<Vec<StatementTree<'de>>, ParseExpressionError> {
+    tokens: &mut Peekable<impl Iterator<Item = Token<'de>>>,
+) -> Result<Vec<StatementTree<'de>>, ParseExpressionError<'de>> {
     // A program is just 0 or more statements
     let mut statements = Vec::new();
     while let Some(token) = tokens.peek() {
@@ -38,6 +41,22 @@ pub fn parse_statements<'de>(
                 }
                 statements.push(StatementTree::VarDeclaration { ident, expr })
             }
+
+            Token::LeftBrace => {
+                tokens.next();
+
+                let block_inner = parse_statements(tokens)?;
+
+                statements.push(StatementTree::Block(block_inner));
+
+                if !matches!(tokens.next(), Some(Token::RightBrace)) {
+                    return Err(ParseExpressionError::MissingRightBrace);
+                }
+            }
+            // This stop the recursion without consuming the token.
+            Token::RightBrace => {
+                break;
+            }
             _ => {
                 let expr = parse_expr(tokens, 0)?;
                 if let Some(token) = tokens.next() {
@@ -52,11 +71,70 @@ pub fn parse_statements<'de>(
     Ok(statements)
 }
 
+// pub fn parse_statements<'de>(
+//     tokens: &'de mut Peekable<impl Iterator<Item = Token<'de>>>,
+// ) -> Result<Vec<StatementTree<'de>>, ParseExpressionError> {
+//     // A program is just 0 or more statements
+//     let mut statements = Vec::new();
+//     while let Some(token) = tokens.peek() {
+//         // let statement : StatementTree<'de>= match token {
+//         statements.push(match token {
+//             Token::Print => {
+//                 tokens.next();
+//                 let expr = parse_expr(tokens, 0)?;
+//                 if let Some(token) = tokens.next() {
+//                     if token != Token::Semicolon {
+//                         panic!("Expected semicolon got '{token}'");
+//                     }
+//                 }
+//                 StatementTree::Print(expr)
+//             }
+//             Token::Var => {
+//                 tokens.next();
+//                 let Some(Token::Identifier(ident)) = tokens.next() else {
+//                     panic!("Expected identifier");
+//                 };
+//                 let expr = if tokens.next_if_eq(&Token::Equal).is_some() {
+//                     Some(parse_expr(tokens, 0)?)
+//                 } else {
+//                     None
+//                 };
+
+//                 if tokens.next().is_some_and(|token| token != Token::Semicolon) {
+//                     panic!("Expected semicolon got '{token}'");
+//                 }
+//                 StatementTree::VarDeclaration { ident, expr }
+//             }
+//             Token::LeftBrace => {
+//                 let mut block = Vec::new();
+
+//                 while let Some(token) = tokens.next_if(|token| token != &Token::RightParen) {
+//                     // block.push(toe);
+//                 }
+
+//                 assert_eq!(tokens.next(), Some(Token::RightBrace));
+//                 StatementTree::Block(block)
+//             }
+//             _ => {
+//                 let expr = parse_expr(tokens, 0)?;
+//                 if let Some(token) = tokens.next() {
+//                     if token != Token::Semicolon {
+//                         panic!("Expected semicolon got '{token}'");
+//                     }
+//                 }
+//                 StatementTree::Expr(expr)
+//             } // statements.push(statement);
+//         })
+//     }
+//     Ok(statements)
+// }
+
 pub enum StatementTree<'de> {
     /// Print statement
     Print(ExpressionTree<'de>),
     /// Expression statement
     Expr(ExpressionTree<'de>),
+    Block(Vec<StatementTree<'de>>),
 
     // TODO: This should be a separate type
     // because this a special statement
@@ -362,6 +440,7 @@ impl fmt::Display for Equality<'_> {
 pub enum ParseExpressionError<'de> {
     InvalidToken(Token<'de>),
     MissingRightParen,
+    MissingRightBrace,
 }
 
 impl<'de> std::error::Error for ParseExpressionError<'de> {}
@@ -371,6 +450,7 @@ impl fmt::Display for ParseExpressionError<'_> {
         match self {
             ParseExpressionError::InvalidToken(token) => write!(f, "invalid token: {token}"),
             ParseExpressionError::MissingRightParen => write!(f, "missing right paren"),
+            ParseExpressionError::MissingRightBrace => write!(f, "missing right brace"),
         }
     }
 }
