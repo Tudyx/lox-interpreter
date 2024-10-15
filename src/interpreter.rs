@@ -1,4 +1,4 @@
-use std::{borrow::Cow, collections::HashMap, fmt};
+use std::{borrow::Cow, collections::HashMap, fmt, mem};
 
 use crate::parse::{
     Comparison, Equality, ExpressionTree, Factor, Primary, StatementTree, Term, Unary,
@@ -6,13 +6,13 @@ use crate::parse::{
 
 pub struct Interpreter<'de> {
     /// Map variable identitifer and their value.
-    variables: HashMap<&'de str, Value<'de>>,
+    environments: Environments<'de>,
 }
 
 impl<'de> Interpreter<'de> {
     pub fn new() -> Self {
         Self {
-            variables: HashMap::new(),
+            environments: Environments::new(),
         }
     }
     pub fn evaluate(
@@ -33,12 +33,16 @@ impl<'de> Interpreter<'de> {
                 StatementTree::VarDeclaration { ident, expr } => {
                     if let Some(expr) = expr {
                         let value = self.evaluate_expr(expr)?;
-                        self.variables.insert(ident, value);
+                        self.environments.insert(ident, value);
                     } else {
-                        self.variables.insert(ident, Value::Nil);
+                        self.environments.insert(ident, Value::Nil);
                     }
                 }
-                StatementTree::Block(statements) => self.evaluate(statements)?,
+                StatementTree::Block(statements) => {
+                    self.environments.init_block();
+                    self.evaluate(statements)?;
+                    self.environments.pop_last_block();
+                }
             };
         }
         Ok(())
@@ -57,7 +61,7 @@ impl<'de> Interpreter<'de> {
                 Primary::Nil => Value::Nil,
                 Primary::Group(token_tree) => self.evaluate_expr(*token_tree)?,
                 Primary::Identifier(ident) => self
-                    .variables
+                    .environments
                     .get(ident)
                     .ok_or(EvaluationError::UndefinedVariable(ident))?
                     .clone(),
@@ -149,15 +153,15 @@ impl<'de> Interpreter<'de> {
                     }
                 }
             },
-            ExpressionTree::Assignment(ident, expr) => {
-                if !self.variables.contains_key(ident) {
-                    return Err(EvaluationError::UndeclaredVariable(ident));
+            ExpressionTree::Assignment(ident, expr) => match self.environments.get(ident) {
+                Some(_) => {
+                    let mut value = self.evaluate_expr(*expr)?;
+                    let environment_addr = self.environments.get_mut(ident).unwrap();
+                    mem::swap(environment_addr, &mut value);
+                    environment_addr.clone()
                 }
-
-                let value = self.evaluate_expr(*expr)?;
-                self.variables.insert(ident, value.clone());
-                value
-            }
+                None => return Err(EvaluationError::UndeclaredVariable(ident)),
+            },
         })
     }
 }
@@ -192,6 +196,52 @@ impl fmt::Display for Value<'_> {
             Value::String(string) => write!(f, "{string}"),
             Value::Nil => write!(f, "nil"),
         }
+    }
+}
+
+// The first element is the global, the other are the scop from the lest to the most nested.
+struct Environments<'de>(Vec<HashMap<&'de str, Value<'de>>>);
+
+impl<'de> Environments<'de> {
+    fn new() -> Self {
+        Self(vec![HashMap::new()])
+    }
+
+    fn init_block(&mut self) {
+        self.0.push(HashMap::new());
+    }
+
+    fn pop_last_block(&mut self) {
+        if self.0.len() > 1 {
+            self.0.pop();
+        }
+    }
+
+    fn get(&self, ident: &'de str) -> Option<&Value<'de>> {
+        for environement in self.0.iter().rev() {
+            if let Some(value) = environement.get(ident) {
+                return Some(value);
+            }
+        }
+
+        None
+    }
+
+    fn get_mut(&mut self, ident: &'de str) -> Option<&mut Value<'de>> {
+        for environement in self.0.iter_mut().rev() {
+            if let Some(value) = environement.get_mut(ident) {
+                return Some(value);
+            }
+        }
+
+        None
+    }
+
+    fn insert(&mut self, ident: &'de str, value: Value<'de>) -> Option<Value<'de>> {
+        self.0
+            .last_mut()
+            .expect("should always have at list global env")
+            .insert(ident, value)
     }
 }
 

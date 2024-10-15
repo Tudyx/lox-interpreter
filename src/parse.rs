@@ -71,64 +71,6 @@ pub fn parse_statements<'de>(
     Ok(statements)
 }
 
-// pub fn parse_statements<'de>(
-//     tokens: &'de mut Peekable<impl Iterator<Item = Token<'de>>>,
-// ) -> Result<Vec<StatementTree<'de>>, ParseExpressionError> {
-//     // A program is just 0 or more statements
-//     let mut statements = Vec::new();
-//     while let Some(token) = tokens.peek() {
-//         // let statement : StatementTree<'de>= match token {
-//         statements.push(match token {
-//             Token::Print => {
-//                 tokens.next();
-//                 let expr = parse_expr(tokens, 0)?;
-//                 if let Some(token) = tokens.next() {
-//                     if token != Token::Semicolon {
-//                         panic!("Expected semicolon got '{token}'");
-//                     }
-//                 }
-//                 StatementTree::Print(expr)
-//             }
-//             Token::Var => {
-//                 tokens.next();
-//                 let Some(Token::Identifier(ident)) = tokens.next() else {
-//                     panic!("Expected identifier");
-//                 };
-//                 let expr = if tokens.next_if_eq(&Token::Equal).is_some() {
-//                     Some(parse_expr(tokens, 0)?)
-//                 } else {
-//                     None
-//                 };
-
-//                 if tokens.next().is_some_and(|token| token != Token::Semicolon) {
-//                     panic!("Expected semicolon got '{token}'");
-//                 }
-//                 StatementTree::VarDeclaration { ident, expr }
-//             }
-//             Token::LeftBrace => {
-//                 let mut block = Vec::new();
-
-//                 while let Some(token) = tokens.next_if(|token| token != &Token::RightParen) {
-//                     // block.push(toe);
-//                 }
-
-//                 assert_eq!(tokens.next(), Some(Token::RightBrace));
-//                 StatementTree::Block(block)
-//             }
-//             _ => {
-//                 let expr = parse_expr(tokens, 0)?;
-//                 if let Some(token) = tokens.next() {
-//                     if token != Token::Semicolon {
-//                         panic!("Expected semicolon got '{token}'");
-//                     }
-//                 }
-//                 StatementTree::Expr(expr)
-//             } // statements.push(statement);
-//         })
-//     }
-//     Ok(statements)
-// }
-
 pub enum StatementTree<'de> {
     /// Print statement
     Print(ExpressionTree<'de>),
