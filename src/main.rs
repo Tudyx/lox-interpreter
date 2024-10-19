@@ -1,9 +1,9 @@
-mod interpreter;
+mod interpret;
 mod lex;
 mod parse;
 
 use crate::{
-    interpreter::Interpreter,
+    interpret::Interpreter,
     lex::Lexer,
     parse::{parse_expr, parse_statements},
 };

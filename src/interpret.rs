@@ -5,7 +5,7 @@ use crate::parse::{
 };
 
 pub struct Interpreter<'de> {
-    /// Map variable identitifer and their value.
+    /// Map variables identifier and their value.
     environments: Environments<'de>,
 }
 
@@ -39,9 +39,9 @@ impl<'de> Interpreter<'de> {
                     }
                 }
                 StatementTree::Block(statements) => {
-                    self.environments.init_block();
+                    self.environments.push_block();
                     self.evaluate(statements)?;
-                    self.environments.pop_last_block();
+                    self.environments.pop_block();
                 }
             };
         }
@@ -155,6 +155,7 @@ impl<'de> Interpreter<'de> {
             },
             ExpressionTree::Assignment(ident, expr) => match self.environments.get(ident) {
                 Some(_) => {
+                    // Evaluating assignement expression has side effect on the interpreter.
                     let mut value = self.evaluate_expr(*expr)?;
                     let environment_addr = self.environments.get_mut(ident).unwrap();
                     mem::swap(environment_addr, &mut value);
@@ -166,7 +167,7 @@ impl<'de> Interpreter<'de> {
     }
 }
 
-// An instance of this type is a value.
+/// A value, produced by an expression.
 #[derive(Clone)]
 pub enum Value<'de> {
     Boolean(bool),
@@ -199,7 +200,7 @@ impl fmt::Display for Value<'_> {
     }
 }
 
-// The first element is the global, the other are the scop from the lest to the most nested.
+/// The first element is the global variables,then the others are the scoped from the least to the most nested.
 struct Environments<'de>(Vec<HashMap<&'de str, Value<'de>>>);
 
 impl<'de> Environments<'de> {
@@ -207,17 +208,18 @@ impl<'de> Environments<'de> {
         Self(vec![HashMap::new()])
     }
 
-    fn init_block(&mut self) {
+    fn push_block(&mut self) {
         self.0.push(HashMap::new());
     }
 
-    fn pop_last_block(&mut self) {
+    fn pop_block(&mut self) {
         if self.0.len() > 1 {
             self.0.pop();
         }
     }
 
     fn get(&self, ident: &'de str) -> Option<&Value<'de>> {
+        // As we allow variable shadowing, we take the most nested first.
         for environement in self.0.iter().rev() {
             if let Some(value) = environement.get(ident) {
                 return Some(value);
@@ -240,7 +242,7 @@ impl<'de> Environments<'de> {
     fn insert(&mut self, ident: &'de str, value: Value<'de>) -> Option<Value<'de>> {
         self.0
             .last_mut()
-            .expect("should always have at list global env")
+            .expect("should always have at least global env")
             .insert(ident, value)
     }
 }

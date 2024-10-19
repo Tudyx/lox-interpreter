@@ -2,7 +2,7 @@ use std::{fmt, iter::Peekable};
 
 use crate::lex::Token;
 
-// As we only have a single token lookahead, `Peekable` is all we need.
+// As we only want a single token lookahead, `Peekable` is all we need.
 //
 // Lifetime elision will put the wrong lifetime to the return time so we
 // must be explicit.
@@ -12,7 +12,7 @@ pub fn parse_statements<'de>(
     // A program is just 0 or more statements
     let mut statements = Vec::new();
     while let Some(token) = tokens.peek() {
-        match token {
+        let statement = match token {
             Token::Print => {
                 tokens.next();
                 let expr = parse_expr(tokens, 0)?;
@@ -21,7 +21,7 @@ pub fn parse_statements<'de>(
                         panic!("Expected semicolon got '{token}'");
                     }
                 }
-                statements.push(StatementTree::Print(expr));
+                StatementTree::Print(expr)
             }
             Token::Var => {
                 tokens.next();
@@ -39,7 +39,7 @@ pub fn parse_statements<'de>(
                         panic!("Expected semicolon got '{token}'");
                     }
                 }
-                statements.push(StatementTree::VarDeclaration { ident, expr })
+                StatementTree::VarDeclaration { ident, expr }
             }
 
             Token::LeftBrace => {
@@ -47,13 +47,11 @@ pub fn parse_statements<'de>(
 
                 let block_inner = parse_statements(tokens)?;
 
-                statements.push(StatementTree::Block(block_inner));
-
                 if !matches!(tokens.next(), Some(Token::RightBrace)) {
                     return Err(ParseExpressionError::MissingRightBrace);
                 }
+                StatementTree::Block(block_inner)
             }
-            // This stop the recursion without consuming the token.
             Token::RightBrace => {
                 break;
             }
@@ -64,22 +62,22 @@ pub fn parse_statements<'de>(
                         panic!("Expected semicolon got '{token}'");
                     }
                 }
-                statements.push(StatementTree::Expr(expr));
+                StatementTree::Expr(expr)
             }
-        }
+        };
+        statements.push(statement);
     }
     Ok(statements)
 }
 
 pub enum StatementTree<'de> {
-    /// Print statement
+    /// Print statement.
     Print(ExpressionTree<'de>),
-    /// Expression statement
+    /// Expression statement, for expression that have side effect.
     Expr(ExpressionTree<'de>),
+    /// Block statement. In Lox they don't produce value, like in
+    /// Rust where block are expression.
     Block(Vec<StatementTree<'de>>),
-
-    // TODO: This should be a separate type
-    // because this a special statement
     VarDeclaration {
         ident: &'de str,
         expr: Option<ExpressionTree<'de>>,
@@ -126,8 +124,7 @@ pub fn parse_expr<'de>(
         ExpressionTree::Primary(Primary::Nil)
     };
 
-    // Here we don't pass the rest of the token to the recursive call,
-    // so we must loop ourself
+    // We parse the tokens until we hit something with a lower precedence.
     while let Some(next_token) = tokens.peek() {
         match next_token {
             Token::Star => {
@@ -139,7 +136,6 @@ pub fn parse_expr<'de>(
                 }
                 // Here we want to pass the next items until we encounter something that have the same level of
                 // precedence that the Star. If it's lower, for instance a +, we stop
-                // let rhs = parse_tokens(&mut std::iter::once(tokens.next().unwrap()).peekable());
                 let rhs = parse_expr(tokens, bp)?;
                 lhs = ExpressionTree::Factor(Factor::Star(Box::new(lhs), Box::new(rhs)));
             }
