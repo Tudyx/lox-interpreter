@@ -9,65 +9,84 @@ use crate::lex::Token;
 pub fn parse_statements<'de>(
     tokens: &mut Peekable<impl Iterator<Item = Token<'de>>>,
 ) -> Result<Vec<StatementTree<'de>>, ParseExpressionError<'de>> {
-    // A program is just 0 or more statements
     let mut statements = Vec::new();
-    while let Some(token) = tokens.peek() {
-        let statement = match token {
-            Token::Print => {
-                tokens.next();
-                let expr = parse_expr(tokens, 0)?;
-                if let Some(token) = tokens.next() {
-                    if token != Token::Semicolon {
-                        panic!("Expected semicolon got '{token}'");
-                    }
-                }
-                StatementTree::Print(expr)
-            }
-            Token::Var => {
-                tokens.next();
-                let Some(Token::Identifier(ident)) = tokens.next() else {
-                    panic!("Expected identifier");
-                };
-                let expr = if tokens.next_if_eq(&Token::Equal).is_some() {
-                    Some(parse_expr(tokens, 0)?)
-                } else {
-                    None
-                };
-
-                if let Some(token) = tokens.next() {
-                    if token != Token::Semicolon {
-                        panic!("Expected semicolon got '{token}'");
-                    }
-                }
-                StatementTree::VarDeclaration { ident, expr }
-            }
-
-            Token::LeftBrace => {
-                tokens.next();
-
-                let block_inner = parse_statements(tokens)?;
-
-                if !matches!(tokens.next(), Some(Token::RightBrace)) {
-                    return Err(ParseExpressionError::MissingRightBrace);
-                }
-                StatementTree::Block(block_inner)
-            }
-            Token::RightBrace => {
-                break;
-            }
-            _ => {
-                let expr = parse_expr(tokens, 0)?;
-                if let Some(token) = tokens.next() {
-                    if token != Token::Semicolon {
-                        panic!("Expected semicolon got '{token}'");
-                    }
-                }
-                StatementTree::Expr(expr)
-            }
-        };
+    while let Some(statement) = parse_statement(tokens)? {
         statements.push(statement);
     }
+
     Ok(statements)
+}
+
+pub fn parse_statement<'de>(
+    tokens: &mut Peekable<impl Iterator<Item = Token<'de>>>,
+) -> Result<Option<StatementTree<'de>>, ParseExpressionError<'de>> {
+    let Some(token) = tokens.peek() else {
+        return Ok(None);
+    };
+    // A program is just 0 or more statements
+    let statement = match token {
+        Token::Print => {
+            tokens.next();
+            let expr = parse_expr(tokens, 0)?;
+            if let Some(token) = tokens.next() {
+                if token != Token::Semicolon {
+                    panic!("Expected semicolon got '{token}'");
+                }
+            }
+            StatementTree::Print(expr)
+        }
+        Token::Var => {
+            tokens.next();
+            let Some(Token::Identifier(ident)) = tokens.next() else {
+                panic!("Expected identifier");
+            };
+            let expr = if tokens.next_if_eq(&Token::Equal).is_some() {
+                Some(parse_expr(tokens, 0)?)
+            } else {
+                None
+            };
+
+            if let Some(token) = tokens.next() {
+                if token != Token::Semicolon {
+                    panic!("Expected semicolon got '{token}'");
+                }
+            }
+            StatementTree::VarDeclaration { ident, expr }
+        }
+
+        Token::LeftBrace => {
+            tokens.next();
+            let mut block_statements = Vec::new();
+
+            while let Some(statement) = parse_statement(tokens)? {
+                block_statements.push(statement);
+                if tokens
+                    .peek()
+                    .is_some_and(|token| token == &Token::RightBrace)
+                {
+                    break;
+                }
+            }
+
+            if !matches!(tokens.next(), Some(Token::RightBrace)) {
+                return Err(ParseExpressionError::MissingRightBrace);
+            }
+            StatementTree::Block(block_statements)
+        }
+        Token::RightBrace => {
+            unreachable!();
+        }
+        _ => {
+            let expr = parse_expr(tokens, 0)?;
+            if let Some(token) = tokens.next() {
+                if token != Token::Semicolon {
+                    panic!("Expected semicolon got '{token}'");
+                }
+            }
+            StatementTree::Expr(expr)
+        }
+    };
+    Ok(Some(statement))
 }
 
 pub enum StatementTree<'de> {
